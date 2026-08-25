@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Plus, Trash2, ClipboardPaste } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { Plus, Trash2, ClipboardPaste, Upload, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,11 +12,33 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { base44 } from "@/api/base44Client";
 
 export default function TranscriptManager({ courses, onAdd, onBulkAdd, onDelete }) {
   const [form, setForm] = useState({ course_code: "", course_name: "", credits: "", grade: "", term: "" });
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleTranscriptUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploading(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const response = await base44.functions.invoke("parseTranscript", { file_url });
+      const courses = response.data?.courses || [];
+      if (courses.length > 0) {
+        await onBulkAdd(courses);
+      }
+    } catch (err) {
+      // onBulkAdd handles toast; silently ignore upload errors here
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -93,6 +115,22 @@ export default function TranscriptManager({ courses, onAdd, onBulkAdd, onDelete 
           <Button type="submit" className="flex-1" disabled={!form.course_code.trim()}>
             <Plus className="h-4 w-4 mr-1" /> Add course
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+            title="Upload transcript PDF"
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            className="hidden"
+            onChange={handleTranscriptUpload}
+          />
           <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
             <DialogTrigger asChild>
               <Button type="button" variant="outline">
