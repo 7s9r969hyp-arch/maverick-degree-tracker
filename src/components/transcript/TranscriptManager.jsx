@@ -1,0 +1,166 @@
+import React, { useState } from "react";
+import { Plus, Trash2, ClipboardPaste } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+
+export default function TranscriptManager({ courses, onAdd, onBulkAdd, onDelete }) {
+  const [form, setForm] = useState({ course_code: "", course_name: "", credits: "", grade: "", term: "" });
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+
+  const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!form.course_code.trim()) return;
+    onAdd({
+      course_code: form.course_code.trim(),
+      course_name: form.course_name.trim(),
+      credits: form.credits ? Number(form.credits) : null,
+      grade: form.grade.trim(),
+      term: form.term.trim(),
+    });
+    setForm({ course_code: "", course_name: "", credits: "", grade: "", term: "" });
+  };
+
+  const handlePaste = () => {
+    const lines = pasteText.split("\n").map((l) => l.trim()).filter(Boolean);
+    const parsed = lines.map((line) => {
+      const parts = line.split(/\t|\||,{2,}|\s{2,}/).map((p) => p.trim()).filter(Boolean);
+      if (parts.length >= 1) {
+        return {
+          course_code: parts[0],
+          course_name: parts[1] || "",
+          credits: parts[2] ? Number(parts[2]) || null : null,
+          grade: parts[3] || "",
+          term: parts[4] || "",
+        };
+      }
+      return null;
+    }).filter(Boolean);
+    onBulkAdd(parsed);
+    setPasteText("");
+    setPasteOpen(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <form onSubmit={submit} className="grid grid-cols-2 gap-2">
+        <div className="col-span-2 space-y-1">
+          <Label className="text-xs">Course code</Label>
+          <Input
+            value={form.course_code}
+            onChange={(e) => setField("course_code", e.target.value)}
+            placeholder="CIS 121"
+          />
+        </div>
+        <div className="col-span-2 space-y-1">
+          <Label className="text-xs">Course name</Label>
+          <Input
+            value={form.course_name}
+            onChange={(e) => setField("course_name", e.target.value)}
+            placeholder="Introduction to Programming"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Credits</Label>
+          <Input
+            type="number"
+            value={form.credits}
+            onChange={(e) => setField("credits", e.target.value)}
+            placeholder="4"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Grade</Label>
+          <Input
+            value={form.grade}
+            onChange={(e) => setField("grade", e.target.value)}
+            placeholder="A"
+          />
+        </div>
+        <div className="col-span-2 flex gap-2">
+          <Button type="submit" className="flex-1" disabled={!form.course_code.trim()}>
+            <Plus className="h-4 w-4 mr-1" /> Add course
+          </Button>
+          <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
+            <DialogTrigger asChild>
+              <Button type="button" variant="outline">
+                <ClipboardPaste className="h-4 w-4 mr-1" /> Paste
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Paste transcript courses</DialogTitle>
+              </DialogHeader>
+              <p className="text-sm text-muted-foreground">
+                One course per line. Format: <code>Code | Name | Credits | Grade | Term</code>
+              </p>
+              <Textarea
+                rows={8}
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                placeholder={"CIS 121 | Introduction to Programming | 4 | A | Fall 2024\nMATH 121 | Calculus I | 4 | B+ | Fall 2024"}
+              />
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setPasteOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handlePaste} disabled={!pasteText.trim()}>
+                  Import courses
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </form>
+
+      <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
+        {courses.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-6">
+            No courses added yet. Add courses you've completed to see what's left.
+          </p>
+        )}
+        {courses.map((c) => (
+          <div
+            key={c.id}
+            className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-sm">{c.course_code}</span>
+                {c.grade && (
+                  <span className="text-xs text-muted-foreground">{c.grade}</span>
+                )}
+              </div>
+              {c.course_name && (
+                <p className="text-xs text-muted-foreground truncate">{c.course_name}</p>
+              )}
+            </div>
+            {c.credits != null && (
+              <span className="text-xs text-muted-foreground">{c.credits} cr</span>
+            )}
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              onClick={() => onDelete(c.id)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,71 @@
+{
+  "name": "Requirement",
+  "type": "object",
+  "properties": {
+    "major_id": {
+      "type": "string",
+      "title": "Major ID"
+    },
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "description": "e.g. Major Common Core, Required General Education"
+    },
+    "course_code": {
+      "type": "string",
+      "title": "Course Code",
+      "description": "e.g. CIS 121"
+    },
+    "course_name": {
+      "type": "string",
+      "title": "Course Name"
+    },
+    "credits": {
+      "type": "number",
+      "title": "Credits"
+    },
+    "requirement_type": {
+      "type": "string",
+      "enum": [
+        "required",
+        "elective"
+      ],
+      "default": "required"
+    },
+    "elective_group": {
+      "type": "string",
+      "title": "Elective Group",
+      "description": "Shared label grouping elective options"
+    },
+    "group_min_credits": {
+      "type": "number",
+      "title": "Group Min Credits",
+      "description": "Credits required from this elective group"
+    }
+  },
+  "required": [
+    "major_id",
+    "category",
+    "course_code",
+    "credits",
+    "requirement_type"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

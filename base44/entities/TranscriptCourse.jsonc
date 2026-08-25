@@ -1,0 +1,43 @@
+{
+  "name": "TranscriptCourse",
+  "type": "object",
+  "properties": {
+    "course_code": {
+      "type": "string",
+      "title": "Course Code"
+    },
+    "course_name": {
+      "type": "string",
+      "title": "Course Name"
+    },
+    "credits": {
+      "type": "number",
+      "title": "Credits"
+    },
+    "grade": {
+      "type": "string",
+      "title": "Grade"
+    },
+    "term": {
+      "type": "string",
+      "title": "Term"
+    }
+  },
+  "required": [
+    "course_code"
+  ],
+  "rls": {
+    "read": {
+      "created_by_id": "{{user.id}}"
+    },
+    "create": {
+      "created_by_id": "{{user.id}}"
+    },
+    "update": {
+      "created_by_id": "{{user.id}}"
+    },
+    "delete": {
+      "created_by_id": "{{user.id}}"
+    }
+  }
+}
