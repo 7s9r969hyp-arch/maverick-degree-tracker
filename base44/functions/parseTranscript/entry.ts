@@ -10,7 +10,7 @@ export default async function(req) {
     if (!file_url) return Response.json({ error: 'file_url is required' }, { status: 400 });
 
     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-      prompt: `You are parsing a college transcript PDF. Extract every course the student has actually completed (ignore courses with grade Z or courses listed as "in progress" or with 0 credits earned). For each completed course return: course_code (e.g. "CIS 101"), course_name, credits (number), grade, term (e.g. "Fall 2024"). Also include transfer credits if they have a course code listed. Do NOT include summary rows or lines that are not individual courses. Return ONLY a JSON object matching the schema.`,
+      prompt: `You are parsing a college transcript PDF. Extract every course the student has taken (including transfer credits and courses currently in progress). For each course return: course_code (e.g. "CIS 101"), course_name, credits (number earned), grade, term (e.g. "Fall 2024"), and status. Set status to "in_progress" if the course has no grade yet, or the grade is "Z", "IP", "W", "T", or the course is explicitly listed as "in progress" or "current". Set status to "completed" for all other courses including transfer credits with a passing grade. Do NOT include summary rows, GPA lines, or lines that are not individual courses. Return ONLY a JSON object matching the schema.`,
       file_urls: [file_url],
       response_json_schema: {
         type: "object",
@@ -24,7 +24,8 @@ export default async function(req) {
                 course_name: { type: "string" },
                 credits: { type: "number" },
                 grade: { type: "string" },
-                term: { type: "string" }
+                term: { type: "string" },
+                status: { type: "string", enum: ["completed", "in_progress"] }
               },
               required: ["course_code"]
             }

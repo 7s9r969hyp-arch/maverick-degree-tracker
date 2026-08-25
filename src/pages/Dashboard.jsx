@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
 import { GraduationCap, Sparkles } from "lucide-react";
-import MajorSelector from "@/components/major/MajorSelector";
+import ProgramSelector from "@/components/major/ProgramSelector";
 import TranscriptManager from "@/components/transcript/TranscriptManager";
 import ProgressOverview from "@/components/progress/ProgressOverview";
 import RequirementProgress from "@/components/progress/RequirementProgress";
@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/use-toast";
 export default function Dashboard() {
   const { toast } = useToast();
   const [majors, setMajors] = useState([]);
-  const [selectedMajorId, setSelectedMajorId] = useState("");
+  const [selectedProgramIds, setSelectedProgramIds] = useState([]);
   const [requirements, setRequirements] = useState([]);
   const [transcript, setTranscript] = useState([]);
   const [loadingMajors, setLoadingMajors] = useState(true);
@@ -44,15 +44,27 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (!selectedMajorId) {
+    if (selectedProgramIds.length === 0) {
       setRequirements([]);
       return;
     }
     setLoadingReqs(true);
     (async () => {
       try {
-        const data = await base44.entities.Requirement.filter({ major_id: selectedMajorId }, "category", 500);
-        setRequirements(data);
+        const reqArrays = await Promise.all(
+          selectedProgramIds.map((pid) =>
+            base44.entities.Requirement.filter({ major_id: pid }, "category", 500)
+          )
+        );
+        const combined = [];
+        selectedProgramIds.forEach((pid, i) => {
+          const program = majors.find((m) => m.id === pid);
+          const prefix = program ? program.name : "Program";
+          reqArrays[i].forEach((r) => {
+            combined.push({ ...r, category: `${prefix} — ${r.category}` });
+          });
+        });
+        setRequirements(combined);
       } catch (e) {
         toast({ variant: "destructive", title: "Could not load requirements." });
         setRequirements([]);
@@ -60,7 +72,7 @@ export default function Dashboard() {
         setLoadingReqs(false);
       }
     })();
-  }, [selectedMajorId]);
+  }, [selectedProgramIds, majors]);
 
   const analysis = useMemo(
     () => analyzeProgress(requirements, transcript),
@@ -117,15 +129,19 @@ export default function Dashboard() {
           {loadingMajors ? (
             <div className="h-12 animate-pulse rounded-lg bg-muted" />
           ) : (
-            <MajorSelector
-              majors={majors}
-              selectedMajorId={selectedMajorId}
-              onSelect={setSelectedMajorId}
+            <ProgramSelector
+              programs={majors}
+              selectedIds={selectedProgramIds}
+              onToggle={(id) =>
+                setSelectedProgramIds((prev) =>
+                  prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+                )
+              }
             />
           )}
         </div>
 
-        {selectedMajorId && (
+        {selectedProgramIds.length > 0 && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 flex flex-col gap-6">
               <section className="rounded-2xl border bg-card p-6 shadow-sm">
@@ -173,11 +189,11 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!selectedMajorId && !loadingMajors && (
+        {selectedProgramIds.length === 0 && !loadingMajors && (
           <div className="text-center py-20">
             <GraduationCap className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
             <p className="text-muted-foreground">
-              Select a major above to start auditing your degree progress.
+              Select one or more majors or minors above to start auditing your degree progress.
             </p>
           </div>
         )}

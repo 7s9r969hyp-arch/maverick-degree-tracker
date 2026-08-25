@@ -1,15 +1,16 @@
 import React from "react";
-import { AlertCircle, BookMarked } from "lucide-react";
+import { AlertCircle, BookMarked, Clock } from "lucide-react";
 
 export default function RemainingSummary({ analysis }) {
-  const { remainingRequired, unsatisfiedGroups } = analysis;
+  const { remainingRequired, unsatisfiedGroups, inProgressRequired } = analysis;
   const hasRemaining = remainingRequired.length > 0 || unsatisfiedGroups.length > 0;
+  const hasInProgress = inProgressRequired && inProgressRequired.length > 0;
 
-  if (!hasRemaining) {
+  if (!hasRemaining && !hasInProgress) {
     return (
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
         <p className="text-sm font-medium text-emerald-700">
-          🎉 All requirements satisfied — you've completed this major!
+          🎉 All requirements satisfied — you've completed this program!
         </p>
       </div>
     );
@@ -17,6 +18,27 @@ export default function RemainingSummary({ analysis }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {hasInProgress && (
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="h-4 w-4 text-blue-500" />
+            <h4 className="text-sm font-medium">Currently in progress</h4>
+            <span className="text-xs text-muted-foreground">({inProgressRequired.length})</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {inProgressRequired.map((r) => (
+              <span
+                key={r.id || r.course_code}
+                className="inline-flex items-center gap-1.5 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs"
+              >
+                <span className="font-medium">{r.course_code}</span>
+                <span className="text-muted-foreground">{r.credits}cr</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {remainingRequired.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-2">

@@ -8,8 +8,10 @@ export default function ProgressOverview({ analysis }) {
     completedCredits,
     totalCredits,
     remainingCredits,
+    inProgressCredits,
     completedRequired,
     totalRequired,
+    inProgressRequired,
     remainingCount,
   } = analysis;
 
@@ -25,8 +27,8 @@ export default function ProgressOverview({ analysis }) {
       icon: CheckCircle2,
     },
     {
-      label: "Credits remaining",
-      value: `${remainingCredits}`,
+      label: "In progress",
+      value: `${inProgressCredits || 0} cr`,
       icon: Clock,
     },
     {
@@ -48,9 +50,16 @@ export default function ProgressOverview({ analysis }) {
             {completedCredits} of {totalCredits} credits satisfied
           </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {completedRequired} / {totalRequired} required courses done
-        </p>
+        <div className="text-right">
+          <p className="text-sm text-muted-foreground">
+            {completedRequired} / {totalRequired} required done
+          </p>
+          {inProgressRequired > 0 && (
+            <p className="text-xs text-blue-500 mt-0.5">
+              {inProgressRequired} in progress
+            </p>
+          )}
+        </div>
       </div>
 
       <Progress value={progressPercent} className="h-2.5" />

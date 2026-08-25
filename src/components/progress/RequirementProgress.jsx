@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { CheckCircle2, Circle, AlertCircle } from "lucide-react";
+import { CheckCircle2, Circle, AlertCircle, Clock } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -11,16 +11,23 @@ import { cn } from "@/lib/utils";
 
 function CourseRow({ item }) {
   const done = item.status === "complete";
+  const inProgress = item.status === "in_progress";
   return (
     <div className="flex items-center gap-3 py-2">
       {done ? (
         <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+      ) : inProgress ? (
+        <Clock className="h-4 w-4 text-blue-500 shrink-0" />
       ) : (
         <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
       )}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2">
-          <span className={cn("text-sm font-medium", done && "text-muted-foreground line-through")}>
+          <span className={cn(
+            "text-sm font-medium",
+            done && "text-muted-foreground line-through",
+            inProgress && "text-blue-600"
+          )}>
             {item.course_code}
           </span>
           {item.course_name && (
@@ -29,6 +36,9 @@ function CourseRow({ item }) {
         </div>
         {done && item.matchedCourse?.grade && (
           <p className="text-[11px] text-muted-foreground">Grade: {item.matchedCourse.grade}</p>
+        )}
+        {inProgress && (
+          <p className="text-[11px] text-blue-500">In progress</p>
         )}
       </div>
       <span className="text-xs text-muted-foreground shrink-0">{item.credits} cr</span>
@@ -51,6 +61,9 @@ function ElectiveGroupBlock({ group }) {
         </div>
         <span className="text-xs text-muted-foreground">
           {group.completedCredits} / {group.minCredits} cr
+          {group.inProgressCredits > 0 && (
+            <span className="text-blue-500"> ({group.inProgressCredits} in progress)</span>
+          )}
         </span>
       </div>
       <Progress value={pct} className="h-1.5 my-2" />
@@ -62,14 +75,23 @@ function ElectiveGroupBlock({ group }) {
           const taken = group.completedCourses.some(
             (c) => c.course_code === opt.course_code
           );
+          const inProg = group.inProgressCourses.some(
+            (c) => c.course_code === opt.course_code
+          );
           return (
             <div key={opt.id || opt.course_code} className="flex items-center gap-2 py-1">
               {taken ? (
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : inProg ? (
+                <Clock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
               ) : (
                 <Circle className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
               )}
-              <span className={cn("text-xs", taken ? "text-muted-foreground line-through" : "")}>
+              <span className={cn(
+                "text-xs",
+                taken ? "text-muted-foreground line-through" : "",
+                inProg ? "text-blue-600" : ""
+              )}>
                 {opt.course_code}
               </span>
               {opt.course_name && (
@@ -90,7 +112,7 @@ export default function RequirementProgress({ categories }) {
   if (categories.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-8">
-        Select a major to view its requirements.
+        Select a program to view its requirements.
       </p>
     );
   }
@@ -99,6 +121,7 @@ export default function RequirementProgress({ categories }) {
     <Accordion type="multiple" value={openCats} onValueChange={setOpenCats} className="w-full">
       {categories.map((cat) => {
         const doneCount = cat.requiredItems.filter((i) => i.status === "complete").length;
+        const inProgressCount = cat.requiredItems.filter((i) => i.status === "in_progress").length;
         const total = cat.requiredItems.length + cat.electiveGroupList.length;
         const doneTotal = doneCount + cat.electiveGroupList.filter((g) => g.satisfied).length;
         const allDone = doneTotal === total && total > 0;
@@ -115,6 +138,9 @@ export default function RequirementProgress({ categories }) {
                   )}
                 >
                   {doneTotal}/{total}
+                  {inProgressCount > 0 && (
+                    <span className="text-blue-500 ml-1">+{inProgressCount} IP</span>
+                  )}
                 </span>
               </div>
             </AccordionTrigger>

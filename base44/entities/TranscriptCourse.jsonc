@@ -21,6 +21,15 @@
     "term": {
       "type": "string",
       "title": "Term"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "in_progress"
+      ],
+      "default": "completed",
+      "title": "Status"
     }
   },
   "required": [
