@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2, Circle, Clock, BookOpen, GraduationCap } from "lucide-react";
+import { CheckCircle2, Circle, Clock, BookOpen, GraduationCap, CalendarPlus } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 function ProgramBar({ program, analysis }) {
@@ -36,14 +36,21 @@ function ProgramBar({ program, analysis }) {
 export default function ProgressOverview({ overallAnalysis, perProgramAnalyses }) {
   const {
     progressPercent,
+    projectedPercent,
     completedCredits,
     totalCredits,
     inProgressCredits,
+    plannedCredits,
+    projectedCredits,
     completedRequired,
     totalRequired,
     inProgressRequired,
+    plannedRequired,
     remainingCount,
+    projectedRemainingCount,
   } = overallAnalysis;
+
+  const hasPlanned = (plannedCredits || 0) > 0 || (plannedRequired && plannedRequired.length > 0);
 
   const stats = [
     { label: "Overall progress", value: `${progressPercent}%`, icon: BookOpen },
@@ -76,6 +83,23 @@ export default function ProgressOverview({ overallAnalysis, perProgramAnalyses }
           </div>
         </div>
         <Progress value={progressPercent} className="h-2.5 mt-3" />
+        {hasPlanned && projectedPercent > progressPercent && (
+          <div className="mt-3 rounded-lg border border-violet-200 bg-violet-50/50 p-3">
+            <div className="flex items-end justify-between mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <CalendarPlus className="h-3.5 w-3.5 text-violet-500" />
+                <p className="text-xs font-medium text-violet-700">
+                  Projected with planned courses
+                </p>
+              </div>
+              <p className="text-lg font-semibold text-violet-700">{projectedPercent}%</p>
+            </div>
+            <Progress value={projectedPercent} className="h-2" />
+            <p className="text-[11px] text-violet-600 mt-1.5">
+              {projectedCredits} of {totalCredits} credits — {projectedRemainingCount} item{projectedRemainingCount === 1 ? "" : "s"} still remaining
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Per-program progress bars */}

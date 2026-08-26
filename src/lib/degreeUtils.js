@@ -18,6 +18,12 @@ export function buildInProgressSet(transcriptCourses) {
     .map((c) => normalizeCode(c.course_code)));
 }
 
+// Set of planned course codes.
+export function buildPlannedSet(plannedCourses) {
+  return new Set((plannedCourses || [])
+    .map((c) => normalizeCode(c.course_code)));
+}
+
 // Extracts the department/discipline from a course code (e.g. "ENG 101" -> "ENG").
 export function getDiscipline(courseCode) {
   if (!courseCode) return "";
@@ -25,13 +31,18 @@ export function getDiscipline(courseCode) {
   return match ? match[1].toUpperCase() : "";
 }
 
-// Compares requirements against completed + in-progress transcript courses.
-export function analyzeProgress(requirements, transcriptCourses) {
+// Compares requirements against completed + in-progress + planned courses.
+export function analyzeProgress(requirements, transcriptCourses, plannedCourses = []) {
   const completed = buildCompletedSet(transcriptCourses);
   const inProgress = buildInProgressSet(transcriptCourses);
+  const planned = buildPlannedSet(plannedCourses);
   const transcriptByCode = {};
   (transcriptCourses || []).forEach((c) => {
     transcriptByCode[normalizeCode(c.course_code)] = c;
+  });
+  const plannedByCode = {};
+  (plannedCourses || []).forEach((c) => {
+    plannedByCode[normalizeCode(c.course_code)] = c;
   });
 
   const categoryMap = {};
@@ -53,11 +64,14 @@ export function analyzeProgress(requirements, transcriptCourses) {
         ? "complete"
         : inProgress.has(norm)
           ? "in_progress"
-          : "remaining";
+          : planned.has(norm)
+            ? "planned"
+            : "remaining";
       cat.requiredItems.push({
         ...req,
         status,
         matchedCourse: transcriptByCode[norm],
+        plannedCourse: plannedByCode[norm],
       });
     } else {
       const gKey = req.elective_group;
@@ -69,6 +83,7 @@ export function analyzeProgress(requirements, transcriptCourses) {
           options: [],
           completedCourses: [],
           inProgressCourses: [],
+          plannedCourses: [],
         };
       }
       const g = cat.electiveGroups[gKey];
@@ -79,6 +94,8 @@ export function analyzeProgress(requirements, transcriptCourses) {
         g.completedCourses.push(req);
       } else if (inProgress.has(norm)) {
         g.inProgressCourses.push(req);
+      } else if (planned.has(norm)) {
+        g.plannedCourses.push(req);
       }
     }
   });
@@ -88,15 +105,25 @@ export function analyzeProgress(requirements, transcriptCourses) {
     cat.electiveGroupList = Object.values(cat.electiveGroups).map((g) => {
       g.completedCredits = g.completedCourses.reduce((s, r) => s + (r.credits || 0), 0);
       g.inProgressCredits = g.inProgressCourses.reduce((s, r) => s + (r.credits || 0), 0);
+      g.plannedCredits = g.plannedCourses.reduce((s, r) => s + (r.credits || 0), 0);
       g.remainingCredits = Math.max(0, g.minCredits - g.completedCredits);
-      // Track distinct disciplines among completed courses
+      // Track distinct disciplines
       g.completedDisciplines = [...new Set(g.completedCourses.map((r) => getDiscipline(r.course_code)))].filter(Boolean);
       g.inProgressDisciplines = [...new Set(g.inProgressCourses.map((r) => getDiscipline(r.course_code)))].filter(Boolean);
+      g.plannedDisciplines = [...new Set(g.plannedCourses.map((r) => getDiscipline(r.course_code)))].filter(Boolean);
       g.distinctDisciplines = g.completedDisciplines.length;
+      // Projected disciplines: completed + in-progress + planned
+      g.projectedDisciplines = [...new Set([...g.completedDisciplines, ...g.inProgressDisciplines, ...g.plannedDisciplines])];
       // Satisfied only if credit threshold AND discipline threshold are both met
       const creditsMet = g.completedCredits >= g.minCredits && g.minCredits > 0;
       const disciplinesMet = g.minDisciplines > 0 ? g.distinctDisciplines >= g.minDisciplines : true;
       g.satisfied = creditsMet && disciplinesMet;
+      // Projected: would this group be satisfied if planned courses are taken?
+      const projectedCredits = g.completedCredits + g.inProgressCredits + g.plannedCredits;
+      const projectedCreditsMet = projectedCredits >= g.minCredits && g.minCredits > 0;
+      const projectedDisciplinesMet = g.minDisciplines > 0 ? g.projectedDisciplines.length >= g.minDisciplines : true;
+      g.projectedSatisfied = projectedCreditsMet && projectedDisciplinesMet;
+      g.projectedRemainingCredits = Math.max(0, g.minCredits - projectedCredits);
       allGroups.push(g);
       return g;
     });
@@ -111,13 +138,18 @@ export function analyzeProgress(requirements, transcriptCourses) {
   const inProgressRequired = requiredReqs.filter(
     (r) => inProgress.has(normalizeCode(r.course_code))
   );
+  const plannedRequired = requiredReqs.filter(
+    (r) => planned.has(normalizeCode(r.course_code)) && !completed.has(normalizeCode(r.course_code)) && !inProgress.has(normalizeCode(r.course_code))
+  );
   const unsatisfiedGroups = allGroups.filter((g) => !g.satisfied);
+  const projectedUnsatisfiedGroups = allGroups.filter((g) => !g.projectedSatisfied);
 
   const totalRequiredCredits = requiredReqs.reduce((s, r) => s + (r.credits || 0), 0);
   const completedRequiredCredits = requiredReqs
     .filter((r) => completed.has(normalizeCode(r.course_code)))
     .reduce((s, r) => s + (r.credits || 0), 0);
   const inProgressRequiredCredits = inProgressRequired.reduce((s, r) => s + (r.credits || 0), 0);
+  const plannedRequiredCredits = plannedRequired.reduce((s, r) => s + (r.credits || 0), 0);
   const totalElectiveMin = allGroups.reduce((s, g) => s + g.minCredits, 0);
   const completedElectiveCredits = allGroups.reduce(
     (s, g) => s + Math.min(g.completedCredits, g.minCredits),
@@ -127,24 +159,39 @@ export function analyzeProgress(requirements, transcriptCourses) {
     (s, g) => s + Math.min(g.inProgressCredits, Math.max(0, g.minCredits - g.completedCredits)),
     0
   );
+  const plannedElectiveCredits = allGroups.reduce(
+    (s, g) => s + Math.min(g.plannedCredits, Math.max(0, g.minCredits - g.completedCredits - g.inProgressCredits)),
+    0
+  );
 
   const totalCredits = totalRequiredCredits + totalElectiveMin;
   const completedCredits = completedRequiredCredits + completedElectiveCredits;
   const inProgressCredits = inProgressRequiredCredits + inProgressElectiveCredits;
+  const plannedCredits = plannedRequiredCredits + plannedElectiveCredits;
+  const projectedCredits = completedCredits + inProgressCredits + plannedCredits;
+  const projectedRemainingCredits = Math.max(0, totalCredits - projectedCredits);
 
   return {
     categories: Object.values(categoryMap),
     totalRequired: requiredReqs.length,
     completedRequired: requiredReqs.length - remainingRequired.length,
-    inProgressRequired: inProgressRequired.length,
-    remainingRequired,
     inProgressRequired,
+    plannedRequired,
+    remainingRequired,
     unsatisfiedGroups,
+    projectedUnsatisfiedGroups,
     totalCredits,
     completedCredits,
     inProgressCredits,
+    plannedCredits,
+    projectedCredits,
+    projectedRemainingCredits,
     remainingCredits: Math.max(0, totalCredits - completedCredits),
     progressPercent: totalCredits > 0 ? Math.round((completedCredits / totalCredits) * 100) : 0,
+    projectedPercent: totalCredits > 0 ? Math.round((projectedCredits / totalCredits) * 100) : 0,
     remainingCount: remainingRequired.length + unsatisfiedGroups.length,
+    projectedRemainingCount: projectedUnsatisfiedGroups.length + requiredReqs.filter(
+      (r) => !completed.has(normalizeCode(r.course_code)) && !inProgress.has(normalizeCode(r.course_code)) && !planned.has(normalizeCode(r.course_code))
+    ).length,
   };
 }

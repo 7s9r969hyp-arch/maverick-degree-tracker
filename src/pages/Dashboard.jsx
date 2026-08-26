@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { base44 } from "@/api/base44Client";
-import { GraduationCap, Sparkles } from "lucide-react";
+import { GraduationCap, Sparkles, CalendarPlus } from "lucide-react";
 import ProgramSelector from "@/components/major/ProgramSelector";
 import TranscriptManager from "@/components/transcript/TranscriptManager";
+import PlannedCourseManager from "@/components/transcript/PlannedCourseManager";
 import ProgressOverview from "@/components/progress/ProgressOverview";
 import RequirementProgress from "@/components/progress/RequirementProgress";
 import RemainingSummary from "@/components/progress/RemainingSummary";
@@ -17,6 +18,7 @@ export default function Dashboard() {
   const [genEdRequirements, setGenEdRequirements] = useState([]);
   const [programRequirements, setProgramRequirements] = useState([]);
   const [transcript, setTranscript] = useState([]);
+  const [plannedCourses, setPlannedCourses] = useState([]);
   const [courseCatalog, setCourseCatalog] = useState({});
   const [loadingMajors, setLoadingMajors] = useState(true);
   const [loadingReqs, setLoadingReqs] = useState(false);
@@ -43,6 +45,17 @@ export default function Dashboard() {
       try {
         const data = await base44.entities.TranscriptCourse.list("-created_date", 500);
         setTranscript(data);
+      } catch (e) {
+        // ignore - may be empty
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await base44.entities.PlannedCourse.list("-created_date", 500);
+        setPlannedCourses(data);
       } catch (e) {
         // ignore - may be empty
       }
@@ -132,8 +145,8 @@ export default function Dashboard() {
   );
 
   const overallAnalysis = useMemo(
-    () => analyzeProgress(allRequirements, transcript),
-    [allRequirements, transcript]
+    () => analyzeProgress(allRequirements, transcript, plannedCourses),
+    [allRequirements, transcript, plannedCourses]
   );
 
   const perProgramAnalyses = useMemo(
@@ -143,9 +156,9 @@ export default function Dashboard() {
         const reqs = programRequirements.filter((r) =>
           program ? r.category.startsWith(program.name + " —") : false
         );
-        return { program, analysis: analyzeProgress(reqs, transcript) };
+        return { program, analysis: analyzeProgress(reqs, transcript, plannedCourses) };
       }),
-    [selectedProgramIds, majors, programRequirements, transcript]
+    [selectedProgramIds, majors, programRequirements, transcript, plannedCourses]
   );
 
   const addCourse = async (course) => {
@@ -183,6 +196,34 @@ export default function Dashboard() {
       toast({ title: "Transcript cleared." });
     } catch (e) {
       toast({ variant: "destructive", title: "Could not clear transcript." });
+    }
+  };
+
+  const addPlannedCourse = async (course) => {
+    try {
+      const created = await base44.entities.PlannedCourse.create(course);
+      setPlannedCourses((p) => [created, ...p]);
+    } catch (e) {
+      toast({ variant: "destructive", title: "Could not add planned course." });
+    }
+  };
+
+  const deletePlannedCourse = async (id) => {
+    try {
+      await base44.entities.PlannedCourse.delete(id);
+      setPlannedCourses((p) => p.filter((c) => c.id !== id));
+    } catch (e) {
+      toast({ variant: "destructive", title: "Could not delete planned course." });
+    }
+  };
+
+  const clearAllPlanned = async () => {
+    try {
+      await Promise.all(plannedCourses.map((c) => base44.entities.PlannedCourse.delete(c.id)));
+      setPlannedCourses([]);
+      toast({ title: "Planned courses cleared." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Could not clear planned courses." });
     }
   };
 
@@ -254,8 +295,8 @@ export default function Dashboard() {
               </section>
             </div>
 
-            <aside className="lg:col-span-1">
-              <section className="rounded-2xl border bg-card p-6 shadow-sm lg:sticky lg:top-24">
+            <aside className="lg:col-span-1 flex flex-col gap-6">
+              <section className="rounded-2xl border bg-card p-6 shadow-sm">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
                   My transcript
                 </h2>
@@ -266,6 +307,19 @@ export default function Dashboard() {
                   onBulkAdd={bulkAdd}
                   onDelete={deleteCourse}
                   onClearAll={clearAllCourses}
+                />
+              </section>
+              <section className="rounded-2xl border bg-card p-6 shadow-sm">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-1.5">
+                  <CalendarPlus className="h-3.5 w-3.5 text-violet-500" />
+                  Planned courses
+                </h2>
+                <PlannedCourseManager
+                  courses={plannedCourses}
+                  courseCatalog={courseCatalog}
+                  onAdd={addPlannedCourse}
+                  onDelete={deletePlannedCourse}
+                  onClearAll={clearAllPlanned}
                 />
               </section>
             </aside>

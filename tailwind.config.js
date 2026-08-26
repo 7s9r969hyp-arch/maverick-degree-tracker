@@ -63,9 +63,9 @@ module.exports = {
   			}
   		},
   		fontFamily: {
-  			heading: ['var(--font-heading)'],
-  			body: ['var(--font-body)'],
-  			display: ['var(--font-display)'],
+  			heading: ['var(--font-heading)'] ,
+  			body: ['var(--font-body)'] ,
+  			display: ['var(--font-display)'] ,
   			mono: ['var(--font-mono)']
   		},
   		keyframes: {
