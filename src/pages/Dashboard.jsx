@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [transcript, setTranscript] = useState([]);
   const [plannedCourses, setPlannedCourses] = useState([]);
   const [courseCatalog, setCourseCatalog] = useState({});
+  const [catalogRequirements, setCatalogRequirements] = useState([]);
   const [loadingMajors, setLoadingMajors] = useState(true);
   const [loadingReqs, setLoadingReqs] = useState(false);
 
@@ -67,6 +68,7 @@ export default function Dashboard() {
     (async () => {
       try {
         const allReqs = await base44.entities.Requirement.list("category", 2000);
+        setCatalogRequirements(allReqs);
         const catalog = {};
         // Start with the full MNSU catalog (all GE courses from the academic catalog)
         Object.keys(mnsuCourseCatalog).forEach((dept) => {
@@ -159,6 +161,18 @@ export default function Dashboard() {
         return { program, analysis: analyzeProgress(reqs, transcript, plannedCourses) };
       }),
     [selectedProgramIds, majors, programRequirements, transcript, plannedCourses]
+  );
+
+  const programProgressMap = useMemo(
+    () => {
+      const map = {};
+      majors.filter((m) => m.degree_type !== "General Education").forEach((p) => {
+        const reqs = catalogRequirements.filter((r) => r.major_id === p.id);
+        map[p.id] = reqs.length > 0 ? analyzeProgress(reqs, transcript, plannedCourses) : null;
+      });
+      return map;
+    },
+    [majors, catalogRequirements, transcript, plannedCourses]
   );
 
   const addCourse = async (course) => {
@@ -258,6 +272,7 @@ export default function Dashboard() {
               <ProgramSelector
                 programs={selectablePrograms}
                 selectedIds={selectedProgramIds}
+                programProgress={programProgressMap}
                 onToggle={(id) =>
                   setSelectedProgramIds((prev) =>
                     prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]

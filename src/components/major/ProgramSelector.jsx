@@ -3,7 +3,7 @@ import { GraduationCap, Layers, Award, ChevronDown, ChevronRight, Search } from 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 
-export default function ProgramSelector({ programs, selectedIds, onToggle }) {
+export default function ProgramSelector({ programs, selectedIds, onToggle, programProgress }) {
   const [search, setSearch] = useState("");
   const [expandedGroups, setExpandedGroups] = useState(new Set());
 
@@ -70,18 +70,37 @@ export default function ProgramSelector({ programs, selectedIds, onToggle }) {
                 type="button"
                 onClick={() => onToggle(m.id)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors",
+                  "inline-flex flex-col items-stretch gap-1 rounded-lg border px-3 py-2 text-sm transition-colors min-w-[150px]",
                   selected
                     ? "border-primary bg-primary text-primary-foreground"
                     : "bg-background hover:bg-accent"
                 )}
               >
-                {m.name}
-                {m.degree_type !== "Minor" && m.degree_type !== "Certificate" && (
-                  <span className={cn("text-xs", selected ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                    {m.degree_type}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {m.name}
+                  {m.degree_type !== "Minor" && m.degree_type !== "Certificate" && (
+                    <span className={cn("text-xs", selected ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                      {m.degree_type}
+                    </span>
+                  )}
+                </div>
+                {(() => {
+                  const p = programProgress?.[m.id];
+                  if (!p || p.totalCredits <= 0) return null;
+                  return (
+                    <>
+                      <div className={cn("h-1 w-full rounded-full overflow-hidden", selected ? "bg-primary-foreground/20" : "bg-muted")}>
+                        <div
+                          className={cn("h-full rounded-full transition-all", selected ? "bg-primary-foreground/70" : "bg-primary")}
+                          style={{ width: `${p.progressPercent}%` }}
+                        />
+                      </div>
+                      <span className={cn("text-[10px]", selected ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                        {p.remainingCredits > 0 ? `${p.remainingCredits} cr left` : "✓ Complete"}
+                      </span>
+                    </>
+                  );
+                })()}
               </button>
             );
           })}
