@@ -9,6 +9,11 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
+const getDept = (code) => {
+  const m = (code || "").match(/^([A-Za-z]+)/);
+  return m ? m[1].toUpperCase() : "";
+};
+
 function CourseRow({ item }) {
   const done = item.status === "complete";
   const inProgress = item.status === "in_progress";
@@ -56,6 +61,14 @@ function CourseRow({ item }) {
 }
 
 function ElectiveGroupBlock({ group }) {
+  const [selectedDiscipline, setSelectedDiscipline] = useState("");
+  const disciplines = [...new Set(group.options.map((o) => getDept(o.course_code)))].filter(Boolean).sort();
+  const visibleOptions = selectedDiscipline
+    ? group.options.filter((o) => getDept(o.course_code) === selectedDiscipline)
+    : group.options;
+  const sortedOptions = [...visibleOptions].sort((a, b) =>
+    (a.course_code || "").localeCompare(b.course_code || "", undefined, { numeric: true })
+  );
   const pct = group.minCredits > 0 ? Math.min(100, Math.round((group.completedCredits / group.minCredits) * 100)) : 0;
   const minOptionCredits = group.options.length > 0 ? Math.min(...group.options.map((o) => o.credits || 3)) : 3;
   const coursesNeeded = Math.ceil(group.minCredits / minOptionCredits);
@@ -132,8 +145,23 @@ function ElectiveGroupBlock({ group }) {
           <span>Would be satisfied with planned courses</span>
         </div>
       )}
+      {disciplines.length > 1 && (
+        <div className="mb-2">
+          <select
+            value={selectedDiscipline}
+            onChange={(e) => setSelectedDiscipline(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">All disciplines ({group.options.length})</option>
+            {disciplines.map((d) => {
+              const count = group.options.filter((o) => getDept(o.course_code) === d).length;
+              return <option key={d} value={d}>{d} ({count})</option>;
+            })}
+          </select>
+        </div>
+      )}
       <div className="flex flex-col gap-1">
-        {group.options.map((opt) => {
+        {sortedOptions.map((opt) => {
           const taken = group.completedCourses.some((c) => c.course_code === opt.course_code);
           const inProg = group.inProgressCourses.some((c) => c.course_code === opt.course_code);
           const planned = group.plannedCourses.some((c) => c.course_code === opt.course_code);
@@ -188,9 +216,10 @@ export default function RequirementProgress({ categories }) {
     );
   }
 
+  const sortedCategories = [...categories].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
   return (
     <Accordion type="multiple" value={openCats} onValueChange={setOpenCats} className="w-full">
-      {categories.map((cat) => {
+      {sortedCategories.map((cat) => {
         const doneCount = cat.requiredItems.filter((i) => i.status === "complete").length;
         const inProgressCount = cat.requiredItems.filter((i) => i.status === "in_progress").length;
         const plannedCount = cat.requiredItems.filter((i) => i.status === "planned").length;
@@ -225,11 +254,11 @@ export default function RequirementProgress({ categories }) {
             </AccordionTrigger>
             <AccordionContent className="pb-3">
               <div className="divide-y">
-                {cat.requiredItems.map((item) => (
+                {[...cat.requiredItems].sort((a, b) => (a.course_code || "").localeCompare(b.course_code || "", undefined, { numeric: true })).map((item) => (
                   <CourseRow key={item.id || item.course_code} item={item} />
                 ))}
               </div>
-              {cat.electiveGroupList.map((g) => (
+              {[...cat.electiveGroupList].sort((a, b) => (a.label || "").localeCompare(b.label || "")).map((g) => (
                 <ElectiveGroupBlock key={g.label} group={g} />
               ))}
             </AccordionContent>
