@@ -82,7 +82,7 @@ export default function ProgramSelector({ programs, selectedIds, onToggle }) {
             onClick={() => setShowAll(true)}
             className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
-            <ChevronDown className="h-3 w-3" /> Show all {list.length}
+            <ChevronDown className="h-3 w-3" /> Show all
           </button>
         )}
       </div>
@@ -96,7 +96,7 @@ export default function ProgramSelector({ programs, selectedIds, onToggle }) {
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search programs..."
+          placeholder="Search..."
           className="pl-9"
         />
       </div>
@@ -114,7 +114,7 @@ export default function ProgramSelector({ programs, selectedIds, onToggle }) {
       )}
       {selectedIds.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          {selectedIds.length} program{selectedIds.length === 1 ? "" : "s"} selected — mix and match any combination of majors, minors, and certificates.
+          {selectedIds.length} program{selectedIds.length === 1 ? "" : "s"} selected
         </p>
       )}
     </div>

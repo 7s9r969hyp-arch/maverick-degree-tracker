@@ -247,92 +247,95 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto px-5 py-8">
-        <div className="mb-8">
-          {loadingMajors ? (
-            <div className="h-12 animate-pulse rounded-lg bg-muted" />
-          ) : (
-            <ProgramSelector
-              programs={selectablePrograms}
-              selectedIds={selectedProgramIds}
-              onToggle={(id) =>
-                setSelectedProgramIds((prev) =>
-                  prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-                )
-              }
-            />
-          )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <section className="rounded-2xl border bg-card p-6 shadow-sm">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+              Programs
+            </h2>
+            {loadingMajors ? (
+              <div className="h-12 animate-pulse rounded-lg bg-muted" />
+            ) : (
+              <ProgramSelector
+                programs={selectablePrograms}
+                selectedIds={selectedProgramIds}
+                onToggle={(id) =>
+                  setSelectedProgramIds((prev) =>
+                    prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+                  )
+                }
+              />
+            )}
+          </section>
+
+          <div className="flex flex-col gap-6">
+            <section className="rounded-2xl border bg-card p-6 shadow-sm">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+                My transcript
+              </h2>
+              <TranscriptManager
+                courses={transcript}
+                courseCatalog={courseCatalog}
+                onAdd={addCourse}
+                onBulkAdd={bulkAdd}
+                onDelete={deleteCourse}
+                onClearAll={clearAllCourses}
+              />
+            </section>
+            <section className="rounded-2xl border bg-card p-6 shadow-sm">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-1.5">
+                <CalendarPlus className="h-3.5 w-3.5 text-violet-500" />
+                Planned courses
+              </h2>
+              <PlannedCourseManager
+                courses={plannedCourses}
+                courseCatalog={courseCatalog}
+                onAdd={addPlannedCourse}
+                onDelete={deletePlannedCourse}
+                onClearAll={clearAllPlanned}
+              />
+            </section>
+          </div>
         </div>
 
-        {hasSelection && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 flex flex-col gap-6">
-              <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                <ProgressOverview overallAnalysis={overallAnalysis} perProgramAnalyses={perProgramAnalyses} />
-              </section>
+        {hasSelection ? (
+          <div className="flex flex-col gap-6">
+            <section className="rounded-2xl border bg-card p-6 shadow-sm">
+              <ProgressOverview overallAnalysis={overallAnalysis} perProgramAnalyses={perProgramAnalyses} />
+            </section>
 
-              <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                    What's left
-                  </h2>
+            <section className="rounded-2xl border bg-card p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                  What's left
+                </h2>
+              </div>
+              <RemainingSummary analysis={overallAnalysis} />
+            </section>
+
+            <section className="rounded-2xl border bg-card p-6 shadow-sm">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Requirement breakdown
+              </h2>
+              {loadingReqs ? (
+                <div className="space-y-2">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />
+                  ))}
                 </div>
-                <RemainingSummary analysis={overallAnalysis} />
-              </section>
-
-              <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Requirement breakdown
-                </h2>
-                {loadingReqs ? (
-                  <div className="space-y-2">
-                    {[...Array(4)].map((_, i) => (
-                      <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />
-                    ))}
-                  </div>
-                ) : (
-                  <RequirementProgress categories={overallAnalysis.categories} />
-                )}
-              </section>
+              ) : (
+                <RequirementProgress categories={overallAnalysis.categories} />
+              )}
+            </section>
+          </div>
+        ) : (
+          !loadingMajors && (
+            <div className="text-center py-20">
+              <GraduationCap className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+              <p className="text-muted-foreground">
+                Select programs to start auditing your degree progress.
+              </p>
             </div>
-
-            <aside className="lg:col-span-1 flex flex-col gap-6">
-              <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-                  My transcript
-                </h2>
-                <TranscriptManager
-                  courses={transcript}
-                  courseCatalog={courseCatalog}
-                  onAdd={addCourse}
-                  onBulkAdd={bulkAdd}
-                  onDelete={deleteCourse}
-                  onClearAll={clearAllCourses}
-                />
-              </section>
-              <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-1.5">
-                  <CalendarPlus className="h-3.5 w-3.5 text-violet-500" />
-                  Planned courses
-                </h2>
-                <PlannedCourseManager
-                  courses={plannedCourses}
-                  courseCatalog={courseCatalog}
-                  onAdd={addPlannedCourse}
-                  onDelete={deletePlannedCourse}
-                  onClearAll={clearAllPlanned}
-                />
-              </section>
-            </aside>
-          </div>
-        )}
-
-        {!hasSelection && !loadingMajors && (
-          <div className="text-center py-20">
-            <GraduationCap className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
-            <p className="text-muted-foreground">
-              Select one or more majors or minors above to start auditing your degree progress.
-            </p>
-          </div>
+          )
         )}
       </main>
     </div>

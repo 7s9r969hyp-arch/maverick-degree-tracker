@@ -80,6 +80,7 @@ export function analyzeProgress(requirements, transcriptCourses, plannedCourses 
           label: gKey,
           minCredits: 0,
           minDisciplines: 0,
+          minPurpleCredits: 0,
           options: [],
           completedCourses: [],
           inProgressCourses: [],
@@ -90,6 +91,7 @@ export function analyzeProgress(requirements, transcriptCourses, plannedCourses 
       g.options.push(req);
       g.minCredits = Math.max(g.minCredits, req.group_min_credits || 0);
       g.minDisciplines = Math.max(g.minDisciplines, req.group_min_disciplines || 0);
+      g.minPurpleCredits = Math.max(g.minPurpleCredits, req.group_min_purple_credits || 0);
       if (completed.has(norm)) {
         g.completedCourses.push(req);
       } else if (inProgress.has(norm)) {
@@ -106,6 +108,9 @@ export function analyzeProgress(requirements, transcriptCourses, plannedCourses 
       g.completedCredits = g.completedCourses.reduce((s, r) => s + (r.credits || 0), 0);
       g.inProgressCredits = g.inProgressCourses.reduce((s, r) => s + (r.credits || 0), 0);
       g.plannedCredits = g.plannedCourses.reduce((s, r) => s + (r.credits || 0), 0);
+      g.completedPurpleCredits = g.completedCourses.filter((r) => r.course_tag === "purple").reduce((s, r) => s + (r.credits || 0), 0);
+      g.inProgressPurpleCredits = g.inProgressCourses.filter((r) => r.course_tag === "purple").reduce((s, r) => s + (r.credits || 0), 0);
+      g.plannedPurpleCredits = g.plannedCourses.filter((r) => r.course_tag === "purple").reduce((s, r) => s + (r.credits || 0), 0);
       g.remainingCredits = Math.max(0, g.minCredits - g.completedCredits);
       // Track distinct disciplines
       g.completedDisciplines = [...new Set(g.completedCourses.map((r) => getDiscipline(r.course_code)))].filter(Boolean);
@@ -117,12 +122,15 @@ export function analyzeProgress(requirements, transcriptCourses, plannedCourses 
       // Satisfied only if credit threshold AND discipline threshold are both met
       const creditsMet = g.completedCredits >= g.minCredits && g.minCredits > 0;
       const disciplinesMet = g.minDisciplines > 0 ? g.distinctDisciplines >= g.minDisciplines : true;
-      g.satisfied = creditsMet && disciplinesMet;
+      const purpleMet = g.minPurpleCredits > 0 ? g.completedPurpleCredits >= g.minPurpleCredits : true;
+      g.satisfied = creditsMet && disciplinesMet && purpleMet;
       // Projected: would this group be satisfied if planned courses are taken?
       const projectedCredits = g.completedCredits + g.inProgressCredits + g.plannedCredits;
       const projectedCreditsMet = projectedCredits >= g.minCredits && g.minCredits > 0;
       const projectedDisciplinesMet = g.minDisciplines > 0 ? g.projectedDisciplines.length >= g.minDisciplines : true;
-      g.projectedSatisfied = projectedCreditsMet && projectedDisciplinesMet;
+      const projectedPurpleCredits = g.completedPurpleCredits + g.inProgressPurpleCredits + g.plannedPurpleCredits;
+      const projectedPurpleMet = g.minPurpleCredits > 0 ? projectedPurpleCredits >= g.minPurpleCredits : true;
+      g.projectedSatisfied = projectedCreditsMet && projectedDisciplinesMet && projectedPurpleMet;
       g.projectedRemainingCredits = Math.max(0, g.minCredits - projectedCredits);
       allGroups.push(g);
       return g;

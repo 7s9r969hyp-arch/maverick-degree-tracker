@@ -46,6 +46,16 @@
       "type": "number",
       "title": "Group Min Disciplines",
       "description": "Minimum number of distinct disciplines (departments) required in this elective group"
+    },
+    "course_tag": {
+      "type": "string",
+      "title": "Course Tag",
+      "description": "e.g. purple, gold \u2014 used for Diverse Cultures requirement tracking"
+    },
+    "group_min_purple_credits": {
+      "type": "number",
+      "title": "Group Min Purple Credits",
+      "description": "Minimum credits required from purple-tagged courses in this elective group"
     }
   },
   "required": [

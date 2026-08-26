@@ -103,6 +103,24 @@ function ElectiveGroupBlock({ group }) {
           </span>
         </div>
       )}
+      {group.minPurpleCredits > 0 && (
+        <div className={cn(
+          "flex items-center gap-1.5 text-xs mb-1.5",
+          group.completedPurpleCredits >= group.minPurpleCredits ? "text-emerald-600" : "text-amber-600"
+        )}>
+          {group.completedPurpleCredits >= group.minPurpleCredits ? (
+            <CheckCircle2 className="h-3 w-3" />
+          ) : (
+            <AlertCircle className="h-3 w-3" />
+          )}
+          <span>
+            {group.completedPurpleCredits} / {group.minPurpleCredits} purple credits
+            {group.completedPurpleCredits < group.minPurpleCredits && (
+              <span className="font-medium"> — need {group.minPurpleCredits - group.completedPurpleCredits} more</span>
+            )}
+          </span>
+        </div>
+      )}
       <p className="text-xs text-muted-foreground mb-1.5">
         {group.satisfied
           ? "✓ Requirement satisfied"
@@ -139,6 +157,14 @@ function ElectiveGroupBlock({ group }) {
                 <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               )}
               <span className="font-medium">{opt.course_code}</span>
+              {opt.course_tag && (
+                <span className={cn(
+                  "text-[10px] px-1 rounded font-medium shrink-0",
+                  opt.course_tag === "purple" ? "bg-violet-100 text-violet-700" : "bg-amber-100 text-amber-700"
+                )}>
+                  {opt.course_tag === "purple" ? "P" : "G"}
+                </span>
+              )}
               <span className="text-xs text-muted-foreground truncate flex-1">
                 {opt.course_name || "Untitled"}
               </span>
