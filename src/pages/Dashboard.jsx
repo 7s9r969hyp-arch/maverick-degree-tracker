@@ -170,6 +170,16 @@ export default function Dashboard() {
     }
   };
 
+  const clearAllCourses = async () => {
+    try {
+      await Promise.all(transcript.map((c) => base44.entities.TranscriptCourse.delete(c.id)));
+      setTranscript([]);
+      toast({ title: "Transcript cleared." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Could not clear transcript." });
+    }
+  };
+
   const hasSelection = selectedProgramIds.length > 0;
 
   return (
@@ -249,6 +259,7 @@ export default function Dashboard() {
                   onAdd={addCourse}
                   onBulkAdd={bulkAdd}
                   onDelete={deleteCourse}
+                  onClearAll={clearAllCourses}
                 />
               </section>
             </aside>

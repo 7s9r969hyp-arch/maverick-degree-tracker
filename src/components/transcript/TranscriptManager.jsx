@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 
 const selectClass = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 
-export default function TranscriptManager({ courses, courseCatalog, onAdd, onBulkAdd, onDelete }) {
+export default function TranscriptManager({ courses, courseCatalog, onAdd, onBulkAdd, onDelete, onClearAll }) {
   const [form, setForm] = useState({ dept: "", courseNumber: "", course_name: "", credits: "", grade: "", term: "", status: "completed" });
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
@@ -266,6 +266,23 @@ export default function TranscriptManager({ courses, courseCatalog, onAdd, onBul
           </Dialog>
         </div>
       </form>
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">{courses.length} course{courses.length === 1 ? "" : "s"}</span>
+        {courses.length > 0 && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs text-muted-foreground hover:text-destructive"
+            onClick={() => {
+              if (window.confirm("Remove all courses from your transcript?")) onClearAll();
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1" /> Clear all
+          </Button>
+        )}
+      </div>
 
       <div className="flex flex-col gap-3 max-h-72 overflow-y-auto pr-1">
         {courses.length === 0 && (
