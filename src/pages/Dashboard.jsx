@@ -53,7 +53,7 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const allReqs = await base44.entities.Requirement.list("category", 1000);
+        const allReqs = await base44.entities.Requirement.list("category", 2000);
         const catalog = {};
         // Start with the full MNSU catalog (all GE courses from the academic catalog)
         Object.keys(mnsuCourseCatalog).forEach((dept) => {
@@ -86,7 +86,7 @@ export default function Dashboard() {
     if (!genEdMajor) return;
     (async () => {
       try {
-        const reqs = await base44.entities.Requirement.filter({ major_id: genEdMajor.id }, "category", 500);
+        const reqs = await base44.entities.Requirement.filter({ major_id: genEdMajor.id }, "category", 2000);
         setGenEdRequirements(reqs);
       } catch (e) {
         // ignore
