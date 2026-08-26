@@ -70,26 +70,40 @@ function ElectiveGroupBlock({ group }) {
         </span>
       </div>
       <Progress value={pct} className="h-1.5 my-2" />
-      <select
-        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-        defaultValue=""
-      >
-        <option value="" disabled>
-          {group.satisfied
-            ? "✓ Requirement satisfied"
-            : `Choose ${coursesNeeded} needed (${group.minCredits} cr)`}
-        </option>
+      <p className="text-xs text-muted-foreground mb-1.5">
+        {group.satisfied
+          ? "✓ Requirement satisfied"
+          : `Choose ${coursesNeeded} (${group.minCredits} cr needed)`}
+      </p>
+      <div className="flex flex-col gap-1">
         {group.options.map((opt) => {
           const taken = group.completedCourses.some((c) => c.course_code === opt.course_code);
           const inProg = group.inProgressCourses.some((c) => c.course_code === opt.course_code);
-          const status = taken ? " ✓ Completed" : inProg ? " ⏳ In progress" : "";
           return (
-            <option key={opt.id || opt.course_code} value={opt.course_code}>
-              {opt.course_code} — {opt.course_name || "Untitled"} ({opt.credits} cr){status}
-            </option>
+            <div
+              key={opt.id || opt.course_code}
+              className={cn(
+                "flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 text-sm",
+                taken && "border-emerald-200 bg-emerald-50/50",
+                inProg && "border-blue-200 bg-blue-50/50"
+              )}
+            >
+              {taken ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              ) : inProg ? (
+                <Clock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+              ) : (
+                <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              )}
+              <span className="font-medium">{opt.course_code}</span>
+              <span className="text-xs text-muted-foreground truncate flex-1">
+                {opt.course_name || "Untitled"}
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0">{opt.credits} cr</span>
+            </div>
           );
         })}
-      </select>
+      </div>
     </div>
   );
 }

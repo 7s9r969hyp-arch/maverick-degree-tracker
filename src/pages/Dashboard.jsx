@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [genEdRequirements, setGenEdRequirements] = useState([]);
   const [programRequirements, setProgramRequirements] = useState([]);
   const [transcript, setTranscript] = useState([]);
+  const [courseCatalog, setCourseCatalog] = useState({});
   const [loadingMajors, setLoadingMajors] = useState(true);
   const [loadingReqs, setLoadingReqs] = useState(false);
 
@@ -43,6 +44,33 @@ export default function Dashboard() {
         setTranscript(data);
       } catch (e) {
         // ignore - may be empty
+      }
+    })();
+  }, []);
+
+  // Build a course catalog from all requirements (for course selection dropdowns)
+  useEffect(() => {
+    (async () => {
+      try {
+        const allReqs = await base44.entities.Requirement.list("category", 1000);
+        const catalog = {};
+        allReqs.forEach((r) => {
+          if (!r.course_code) return;
+          const match = r.course_code.match(/^([A-Za-z]+)\s*(\d+.*)$/);
+          if (!match) return;
+          const dept = match[1].toUpperCase();
+          const code = `${dept} ${match[2]}`;
+          if (!catalog[dept]) catalog[dept] = [];
+          if (!catalog[dept].some((c) => c.code === code)) {
+            catalog[dept].push({ code, name: r.course_name || "", credits: r.credits || null });
+          }
+        });
+        Object.keys(catalog).forEach((dept) => {
+          catalog[dept].sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
+        });
+        setCourseCatalog(catalog);
+      } catch (e) {
+        // ignore
       }
     })();
   }, []);
@@ -217,6 +245,7 @@ export default function Dashboard() {
                 </h2>
                 <TranscriptManager
                   courses={transcript}
+                  courseCatalog={courseCatalog}
                   onAdd={addCourse}
                   onBulkAdd={bulkAdd}
                   onDelete={deleteCourse}

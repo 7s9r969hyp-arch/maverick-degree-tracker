@@ -15,13 +15,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 
-export default function TranscriptManager({ courses, onAdd, onBulkAdd, onDelete }) {
-  const [form, setForm] = useState({ course_code: "", course_name: "", credits: "", grade: "", term: "", status: "completed" });
+const selectClass = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
+
+export default function TranscriptManager({ courses, courseCatalog, onAdd, onBulkAdd, onDelete }) {
+  const [form, setForm] = useState({ dept: "", courseNumber: "", course_name: "", credits: "", grade: "", term: "", status: "completed" });
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const [pasteInProgress, setPasteInProgress] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
+
+  const departments = Object.keys(courseCatalog || {}).sort();
+  const courseOptions = form.dept ? courseCatalog[form.dept] || [] : [];
 
   const handleTranscriptUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -44,18 +49,32 @@ export default function TranscriptManager({ courses, onAdd, onBulkAdd, onDelete 
 
   const setField = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  const selectDept = (dept) => {
+    setForm((f) => ({ ...f, dept, courseNumber: "", course_name: "", credits: "" }));
+  };
+
+  const selectCourse = (code) => {
+    const course = courseOptions.find((c) => c.code === code);
+    setForm((f) => ({
+      ...f,
+      courseNumber: code,
+      course_name: course?.name || "",
+      credits: course?.credits != null ? String(course.credits) : "",
+    }));
+  };
+
   const submit = (e) => {
     e.preventDefault();
-    if (!form.course_code.trim()) return;
+    if (!form.courseNumber) return;
     onAdd({
-      course_code: form.course_code.trim(),
+      course_code: form.courseNumber,
       course_name: form.course_name.trim(),
       credits: form.credits ? Number(form.credits) : null,
       grade: form.grade.trim(),
       term: form.term.trim(),
       status: form.status,
     });
-    setForm({ course_code: "", course_name: "", credits: "", grade: "", term: "", status: "completed" });
+    setForm({ dept: "", courseNumber: "", course_name: "", credits: "", grade: "", term: "", status: "completed" });
   };
 
   const handlePaste = () => {
@@ -120,20 +139,41 @@ export default function TranscriptManager({ courses, onAdd, onBulkAdd, onDelete 
   return (
     <div className="flex flex-col gap-4">
       <form onSubmit={submit} className="grid grid-cols-2 gap-2">
-        <div className="col-span-2 space-y-1">
-          <Label className="text-xs">Course code</Label>
-          <Input
-            value={form.course_code}
-            onChange={(e) => setField("course_code", e.target.value)}
-            placeholder="CIS 121"
-          />
+        <div className="space-y-1">
+          <Label className="text-xs">Department</Label>
+          <select
+            value={form.dept}
+            onChange={(e) => selectDept(e.target.value)}
+            className={selectClass}
+          >
+            <option value="">Select dept</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Course</Label>
+          <select
+            value={form.courseNumber}
+            onChange={(e) => selectCourse(e.target.value)}
+            className={selectClass}
+            disabled={!form.dept}
+          >
+            <option value="">Select course</option>
+            {courseOptions.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.code}{c.name ? ` — ${c.name}` : ""}{c.credits ? ` (${c.credits} cr)` : ""}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="col-span-2 space-y-1">
           <Label className="text-xs">Course name</Label>
           <Input
             value={form.course_name}
             onChange={(e) => setField("course_name", e.target.value)}
-            placeholder="Introduction to Programming"
+            placeholder="Auto-filled from catalog"
           />
         </div>
         <div className="space-y-1">
@@ -166,7 +206,7 @@ export default function TranscriptManager({ courses, onAdd, onBulkAdd, onDelete 
           </label>
         </div>
         <div className="col-span-2 flex gap-2">
-          <Button type="submit" className="flex-1" disabled={!form.course_code.trim()}>
+          <Button type="submit" className="flex-1" disabled={!form.courseNumber}>
             <Plus className="h-4 w-4 mr-1" /> Add course
           </Button>
           <Button
@@ -174,7 +214,7 @@ export default function TranscriptManager({ courses, onAdd, onBulkAdd, onDelete 
             variant="outline"
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
-            title="Upload transcript PDF"
+            title="Upload transcript or DARS PDF"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
           </Button>

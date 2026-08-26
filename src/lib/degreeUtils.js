@@ -90,7 +90,7 @@ export function analyzeProgress(requirements, transcriptCourses) {
     (r) => !(r.requirement_type === "elective" && r.elective_group)
   );
   const remainingRequired = requiredReqs.filter(
-    (r) => !completed.has(normalizeCode(r.course_code))
+    (r) => !completed.has(normalizeCode(r.course_code)) && !inProgress.has(normalizeCode(r.course_code))
   );
   const inProgressRequired = requiredReqs.filter(
     (r) => inProgress.has(normalizeCode(r.course_code))
