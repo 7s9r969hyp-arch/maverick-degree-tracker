@@ -41,6 +41,11 @@
       "type": "number",
       "title": "Group Min Credits",
       "description": "Credits required from this elective group"
+    },
+    "group_min_disciplines": {
+      "type": "number",
+      "title": "Group Min Disciplines",
+      "description": "Minimum number of distinct disciplines (departments) required in this elective group"
     }
   },
   "required": [

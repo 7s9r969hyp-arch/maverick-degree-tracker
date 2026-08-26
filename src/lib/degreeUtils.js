@@ -18,6 +18,13 @@ export function buildInProgressSet(transcriptCourses) {
     .map((c) => normalizeCode(c.course_code)));
 }
 
+// Extracts the department/discipline from a course code (e.g. "ENG 101" -> "ENG").
+export function getDiscipline(courseCode) {
+  if (!courseCode) return "";
+  const match = String(courseCode).match(/^([A-Za-z]+)/);
+  return match ? match[1].toUpperCase() : "";
+}
+
 // Compares requirements against completed + in-progress transcript courses.
 export function analyzeProgress(requirements, transcriptCourses) {
   const completed = buildCompletedSet(transcriptCourses);
@@ -58,6 +65,7 @@ export function analyzeProgress(requirements, transcriptCourses) {
         cat.electiveGroups[gKey] = {
           label: gKey,
           minCredits: 0,
+          minDisciplines: 0,
           options: [],
           completedCourses: [],
           inProgressCourses: [],
@@ -66,6 +74,7 @@ export function analyzeProgress(requirements, transcriptCourses) {
       const g = cat.electiveGroups[gKey];
       g.options.push(req);
       g.minCredits = Math.max(g.minCredits, req.group_min_credits || 0);
+      g.minDisciplines = Math.max(g.minDisciplines, req.group_min_disciplines || 0);
       if (completed.has(norm)) {
         g.completedCourses.push(req);
       } else if (inProgress.has(norm)) {
@@ -80,7 +89,14 @@ export function analyzeProgress(requirements, transcriptCourses) {
       g.completedCredits = g.completedCourses.reduce((s, r) => s + (r.credits || 0), 0);
       g.inProgressCredits = g.inProgressCourses.reduce((s, r) => s + (r.credits || 0), 0);
       g.remainingCredits = Math.max(0, g.minCredits - g.completedCredits);
-      g.satisfied = g.completedCredits >= g.minCredits && g.minCredits > 0;
+      // Track distinct disciplines among completed courses
+      g.completedDisciplines = [...new Set(g.completedCourses.map((r) => getDiscipline(r.course_code)))].filter(Boolean);
+      g.inProgressDisciplines = [...new Set(g.inProgressCourses.map((r) => getDiscipline(r.course_code)))].filter(Boolean);
+      g.distinctDisciplines = g.completedDisciplines.length;
+      // Satisfied only if credit threshold AND discipline threshold are both met
+      const creditsMet = g.completedCredits >= g.minCredits && g.minCredits > 0;
+      const disciplinesMet = g.minDisciplines > 0 ? g.distinctDisciplines >= g.minDisciplines : true;
+      g.satisfied = creditsMet && disciplinesMet;
       allGroups.push(g);
       return g;
     });
