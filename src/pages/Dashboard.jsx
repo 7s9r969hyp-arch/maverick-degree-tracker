@@ -13,10 +13,14 @@ export default function Dashboard() {
   const { toast } = useToast();
   const [majors, setMajors] = useState([]);
   const [selectedProgramIds, setSelectedProgramIds] = useState([]);
-  const [requirements, setRequirements] = useState([]);
+  const [genEdRequirements, setGenEdRequirements] = useState([]);
+  const [programRequirements, setProgramRequirements] = useState([]);
   const [transcript, setTranscript] = useState([]);
   const [loadingMajors, setLoadingMajors] = useState(true);
   const [loadingReqs, setLoadingReqs] = useState(false);
+
+  const selectablePrograms = majors.filter((m) => m.degree_type !== "General Education");
+  const genEdMajor = majors.find((m) => m.degree_type === "General Education");
 
   useEffect(() => {
     (async () => {
@@ -43,9 +47,23 @@ export default function Dashboard() {
     })();
   }, []);
 
+  // Always load General Education requirements (university-wide)
+  useEffect(() => {
+    if (!genEdMajor) return;
+    (async () => {
+      try {
+        const reqs = await base44.entities.Requirement.filter({ major_id: genEdMajor.id }, "category", 500);
+        setGenEdRequirements(reqs);
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, [genEdMajor]);
+
+  // Load selected program requirements
   useEffect(() => {
     if (selectedProgramIds.length === 0) {
-      setRequirements([]);
+      setProgramRequirements([]);
       return;
     }
     setLoadingReqs(true);
@@ -64,19 +82,29 @@ export default function Dashboard() {
             combined.push({ ...r, category: `${prefix} — ${r.category}` });
           });
         });
-        setRequirements(combined);
+        setProgramRequirements(combined);
       } catch (e) {
         toast({ variant: "destructive", title: "Could not load requirements." });
-        setRequirements([]);
+        setProgramRequirements([]);
       } finally {
         setLoadingReqs(false);
       }
     })();
   }, [selectedProgramIds, majors]);
 
-  const analysis = useMemo(
-    () => analyzeProgress(requirements, transcript),
-    [requirements, transcript]
+  const allRequirements = useMemo(
+    () => [...genEdRequirements, ...programRequirements],
+    [genEdRequirements, programRequirements]
+  );
+
+  const overallAnalysis = useMemo(
+    () => analyzeProgress(allRequirements, transcript),
+    [allRequirements, transcript]
+  );
+
+  const programAnalysis = useMemo(
+    () => analyzeProgress(programRequirements, transcript),
+    [programRequirements, transcript]
   );
 
   const addCourse = async (course) => {
@@ -107,6 +135,8 @@ export default function Dashboard() {
     }
   };
 
+  const hasSelection = selectedProgramIds.length > 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-background">
       <header className="border-b bg-background/80 backdrop-blur sticky top-0 z-10">
@@ -130,7 +160,7 @@ export default function Dashboard() {
             <div className="h-12 animate-pulse rounded-lg bg-muted" />
           ) : (
             <ProgramSelector
-              programs={majors}
+              programs={selectablePrograms}
               selectedIds={selectedProgramIds}
               onToggle={(id) =>
                 setSelectedProgramIds((prev) =>
@@ -141,11 +171,11 @@ export default function Dashboard() {
           )}
         </div>
 
-        {selectedProgramIds.length > 0 && (
+        {hasSelection && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 flex flex-col gap-6">
               <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                <ProgressOverview analysis={analysis} />
+                <ProgressOverview overallAnalysis={overallAnalysis} programAnalysis={programAnalysis} />
               </section>
 
               <section className="rounded-2xl border bg-card p-6 shadow-sm">
@@ -154,7 +184,7 @@ export default function Dashboard() {
                     What's left
                   </h2>
                 </div>
-                <RemainingSummary analysis={analysis} />
+                <RemainingSummary analysis={overallAnalysis} />
               </section>
 
               <section className="rounded-2xl border bg-card p-6 shadow-sm">
@@ -168,7 +198,7 @@ export default function Dashboard() {
                     ))}
                   </div>
                 ) : (
-                  <RequirementProgress categories={analysis.categories} />
+                  <RequirementProgress categories={overallAnalysis.categories} />
                 )}
               </section>
             </div>
@@ -189,7 +219,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {selectedProgramIds.length === 0 && !loadingMajors && (
+        {!hasSelection && !loadingMajors && (
           <div className="text-center py-20">
             <GraduationCap className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
             <p className="text-muted-foreground">

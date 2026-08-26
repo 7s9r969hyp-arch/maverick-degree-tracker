@@ -13,7 +13,8 @@
         "BA",
         "AA",
         "Minor",
-        "Certificate"
+        "Certificate",
+        "General Education"
       ],
       "default": "BS"
     },

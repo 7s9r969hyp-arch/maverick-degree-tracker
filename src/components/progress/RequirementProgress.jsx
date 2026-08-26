@@ -48,6 +48,9 @@ function CourseRow({ item }) {
 
 function ElectiveGroupBlock({ group }) {
   const pct = group.minCredits > 0 ? Math.min(100, Math.round((group.completedCredits / group.minCredits) * 100)) : 0;
+  const minOptionCredits = group.options.length > 0 ? Math.min(...group.options.map((o) => o.credits || 3)) : 3;
+  const coursesNeeded = Math.ceil(group.minCredits / minOptionCredits);
+
   return (
     <div className="rounded-lg border bg-muted/30 p-3 my-2">
       <div className="flex items-center justify-between gap-2">
@@ -67,41 +70,26 @@ function ElectiveGroupBlock({ group }) {
         </span>
       </div>
       <Progress value={pct} className="h-1.5 my-2" />
-      <p className="text-[11px] text-muted-foreground mb-1">
-        Choose from {group.options.length} options:
-      </p>
-      <div className="grid gap-0.5">
+      <select
+        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        defaultValue=""
+      >
+        <option value="" disabled>
+          {group.satisfied
+            ? "✓ Requirement satisfied"
+            : `Choose ${coursesNeeded} needed (${group.minCredits} cr)`}
+        </option>
         {group.options.map((opt) => {
-          const taken = group.completedCourses.some(
-            (c) => c.course_code === opt.course_code
-          );
-          const inProg = group.inProgressCourses.some(
-            (c) => c.course_code === opt.course_code
-          );
+          const taken = group.completedCourses.some((c) => c.course_code === opt.course_code);
+          const inProg = group.inProgressCourses.some((c) => c.course_code === opt.course_code);
+          const status = taken ? " ✓ Completed" : inProg ? " ⏳ In progress" : "";
           return (
-            <div key={opt.id || opt.course_code} className="flex items-center gap-2 py-1">
-              {taken ? (
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-              ) : inProg ? (
-                <Clock className="h-3.5 w-3.5 text-blue-500 shrink-0" />
-              ) : (
-                <Circle className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-              )}
-              <span className={cn(
-                "text-xs",
-                taken ? "text-muted-foreground line-through" : "",
-                inProg ? "text-blue-600" : ""
-              )}>
-                {opt.course_code}
-              </span>
-              {opt.course_name && (
-                <span className="text-[11px] text-muted-foreground truncate">— {opt.course_name}</span>
-              )}
-              <span className="text-[11px] text-muted-foreground ml-auto shrink-0">{opt.credits} cr</span>
-            </div>
+            <option key={opt.id || opt.course_code} value={opt.course_code}>
+              {opt.course_code} — {opt.course_name || "Untitled"} ({opt.credits} cr){status}
+            </option>
           );
         })}
-      </div>
+      </select>
     </div>
   );
 }
