@@ -7,6 +7,7 @@ import ProgressOverview from "@/components/progress/ProgressOverview";
 import RequirementProgress from "@/components/progress/RequirementProgress";
 import RemainingSummary from "@/components/progress/RemainingSummary";
 import { analyzeProgress } from "@/lib/degreeUtils";
+import { mnsuCourseCatalog } from "@/lib/mnsuCatalog";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function Dashboard() {
@@ -54,6 +55,11 @@ export default function Dashboard() {
       try {
         const allReqs = await base44.entities.Requirement.list("category", 1000);
         const catalog = {};
+        // Start with the full MNSU catalog (all GE courses from the academic catalog)
+        Object.keys(mnsuCourseCatalog).forEach((dept) => {
+          catalog[dept] = mnsuCourseCatalog[dept].map((c) => ({ ...c }));
+        });
+        // Merge in any requirement-specific courses not already in the catalog
         allReqs.forEach((r) => {
           if (!r.course_code) return;
           const match = r.course_code.match(/^([A-Za-z]+)\s*(\d+.*)$/);
