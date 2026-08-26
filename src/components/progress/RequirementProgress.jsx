@@ -51,6 +51,9 @@ function ElectiveGroupBlock({ group }) {
   const minOptionCredits = group.options.length > 0 ? Math.min(...group.options.map((o) => o.credits || 3)) : 3;
   const coursesNeeded = Math.ceil(group.minCredits / minOptionCredits);
 
+  const disciplinesMet = group.minDisciplines > 0 ? group.distinctDisciplines >= group.minDisciplines : true;
+  const remainingDisciplines = Math.max(0, (group.minDisciplines || 0) - group.distinctDisciplines);
+
   return (
     <div className="rounded-lg border bg-muted/30 p-3 my-2">
       <div className="flex items-center justify-between gap-2">
@@ -70,10 +73,31 @@ function ElectiveGroupBlock({ group }) {
         </span>
       </div>
       <Progress value={pct} className="h-1.5 my-2" />
+      {group.minDisciplines > 0 && (
+        <div className={cn(
+          "flex items-center gap-1.5 text-xs mb-1.5",
+          disciplinesMet ? "text-emerald-600" : "text-amber-600"
+        )}>
+          {disciplinesMet ? (
+            <CheckCircle2 className="h-3 w-3" />
+          ) : (
+            <AlertCircle className="h-3 w-3" />
+          )}
+          <span>
+            {group.distinctDisciplines} / {group.minDisciplines} disciplines
+            {group.completedDisciplines.length > 0 && (
+              <span className="text-muted-foreground"> ({group.completedDisciplines.join(", ")})</span>
+            )}
+            {!disciplinesMet && remainingDisciplines > 0 && (
+              <span className="font-medium"> — need {remainingDisciplines} more</span>
+            )}
+          </span>
+        </div>
+      )}
       <p className="text-xs text-muted-foreground mb-1.5">
         {group.satisfied
           ? "✓ Requirement satisfied"
-          : `Choose ${coursesNeeded} (${group.minCredits} cr needed)`}
+          : `Choose ${coursesNeeded} (${group.minCredits} cr needed${group.minDisciplines > 0 ? ` from ${group.minDisciplines} disciplines` : ""})`}
       </p>
       <div className="flex flex-col gap-1">
         {group.options.map((opt) => {
