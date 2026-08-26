@@ -103,9 +103,14 @@ export default function RemainingSummary({ analysis }) {
               <div key={g.label} className="flex items-center justify-between rounded-md border bg-amber-50/50 px-3 py-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{g.label}</span>
-                  {!g.satisfied && g.projectedSatisfied && (
+                  {!g.satisfied && g.projectedSatisfied && g.plannedCredits > 0 && (
                     <span className="text-[11px] text-violet-600 flex items-center gap-0.5">
                       <CalendarPlus className="h-3 w-3" /> covered by planned
+                    </span>
+                  )}
+                  {!g.satisfied && g.projectedSatisfied && g.plannedCredits === 0 && (
+                    <span className="text-[11px] text-blue-600 flex items-center gap-0.5">
+                      <Clock className="h-3 w-3" /> covered by in-progress
                     </span>
                   )}
                 </div>

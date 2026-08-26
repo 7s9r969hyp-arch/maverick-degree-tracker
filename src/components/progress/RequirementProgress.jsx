@@ -108,7 +108,7 @@ function ElectiveGroupBlock({ group }) {
           ? "✓ Requirement satisfied"
           : `Choose ${coursesNeeded} (${group.minCredits} cr needed${group.minDisciplines > 0 ? ` from ${group.minDisciplines} disciplines` : ""})`}
       </p>
-      {!group.satisfied && group.projectedSatisfied && (
+      {!group.satisfied && group.projectedSatisfied && group.plannedCredits > 0 && (
         <div className="flex items-center gap-1.5 text-xs text-violet-600 mb-1.5">
           <CalendarPlus className="h-3 w-3" />
           <span>Would be satisfied with planned courses</span>
@@ -191,7 +191,7 @@ export default function RequirementProgress({ categories }) {
                   {plannedCount > 0 && (
                     <span className="text-violet-500 ml-1">+{plannedCount} planned</span>
                   )}
-                  {!allDone && projectedDoneTotal === total && (
+                  {!allDone && projectedDoneTotal === total && plannedCount > 0 && (
                     <span className="text-violet-600 ml-1">✓ projected</span>
                   )}
                 </span>
