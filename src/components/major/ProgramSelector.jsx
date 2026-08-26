@@ -88,17 +88,9 @@ export default function ProgramSelector({ programs, selectedIds, onToggle, progr
                   const p = programProgress?.[m.id];
                   if (!p || p.totalCredits <= 0) return null;
                   return (
-                    <>
-                      <div className={cn("h-1 w-full rounded-full overflow-hidden", selected ? "bg-primary-foreground/20" : "bg-muted")}>
-                        <div
-                          className={cn("h-full rounded-full transition-all", selected ? "bg-primary-foreground/70" : "bg-primary")}
-                          style={{ width: `${p.progressPercent}%` }}
-                        />
-                      </div>
-                      <span className={cn("text-[10px]", selected ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                        {p.remainingCredits > 0 ? `${p.remainingCredits} cr left` : "✓ Complete"}
-                      </span>
-                    </>
+                    <span className={cn("text-[10px]", selected ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                      {p.remainingCredits > 0 ? `${p.remainingCredits} cr left` : "✓ Complete"}
+                    </span>
                   );
                 })()}
               </button>
