@@ -2,7 +2,38 @@ import React from "react";
 import { CheckCircle2, Circle, Clock, BookOpen, GraduationCap } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
-export default function ProgressOverview({ overallAnalysis, programAnalysis }) {
+function ProgramBar({ program, analysis }) {
+  const pct = analysis.progressPercent;
+  const ip = analysis.inProgressRequired;
+  return (
+    <div className="rounded-xl border bg-muted/30 p-4">
+      <div className="flex items-end justify-between mb-2.5">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <GraduationCap className="h-3.5 w-3.5" />
+            {program.name}
+            <span className="text-muted-foreground/60">{program.degree_type}</span>
+          </p>
+          <p className="text-2xl font-semibold tracking-tight mt-0.5">{pct}%</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {analysis.completedCredits} of {analysis.totalCredits} credits
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-muted-foreground">
+            {analysis.completedRequired} / {analysis.totalRequired} required
+          </p>
+          {ip > 0 && (
+            <p className="text-[11px] text-blue-500 mt-0.5">{ip} in progress</p>
+          )}
+        </div>
+      </div>
+      <Progress value={pct} className="h-2" />
+    </div>
+  );
+}
+
+export default function ProgressOverview({ overallAnalysis, perProgramAnalyses }) {
   const {
     progressPercent,
     completedCredits,
@@ -14,10 +45,6 @@ export default function ProgressOverview({ overallAnalysis, programAnalysis }) {
     remainingCount,
   } = overallAnalysis;
 
-  const programPct = programAnalysis.progressPercent;
-  const programCompleted = programAnalysis.completedCredits;
-  const programTotal = programAnalysis.totalCredits;
-
   const stats = [
     { label: "Overall progress", value: `${progressPercent}%`, icon: BookOpen },
     { label: "Credits complete", value: `${completedCredits} / ${totalCredits}`, icon: CheckCircle2 },
@@ -27,7 +54,7 @@ export default function ProgressOverview({ overallAnalysis, programAnalysis }) {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Overall Degree Progress (Gen Ed + Program) */}
+      {/* Overall Degree Progress */}
       <div>
         <div className="flex items-end justify-between">
           <div>
@@ -44,41 +71,19 @@ export default function ProgressOverview({ overallAnalysis, programAnalysis }) {
               {completedRequired} / {totalRequired} required done
             </p>
             {inProgressRequired > 0 && (
-              <p className="text-xs text-blue-500 mt-0.5">
-                {inProgressRequired} in progress
-              </p>
+              <p className="text-xs text-blue-500 mt-0.5">{inProgressRequired} in progress</p>
             )}
           </div>
         </div>
         <Progress value={progressPercent} className="h-2.5 mt-3" />
       </div>
 
-      {/* Program-Specific Progress (Major/Minor/Certificate only) */}
-      {programTotal > 0 && (
-        <div className="rounded-xl border bg-muted/30 p-4">
-          <div className="flex items-end justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <GraduationCap className="h-3.5 w-3.5" />
-                Major / Minor / Certificate progress
-              </p>
-              <p className="text-2xl font-semibold tracking-tight mt-1">{programPct}%</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {programCompleted} of {programTotal} program credits satisfied
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-muted-foreground">
-                {programAnalysis.completedRequired} / {programAnalysis.totalRequired} required
-              </p>
-              {programAnalysis.inProgressRequired > 0 && (
-                <p className="text-[11px] text-blue-500 mt-0.5">
-                  {programAnalysis.inProgressRequired} in progress
-                </p>
-              )}
-            </div>
-          </div>
-          <Progress value={programPct} className="h-2 mt-2.5" />
+      {/* Per-program progress bars */}
+      {perProgramAnalyses && perProgramAnalyses.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {perProgramAnalyses.map(({ program, analysis }) => (
+            <ProgramBar key={program.id} program={program} analysis={analysis} />
+          ))}
         </div>
       )}
 

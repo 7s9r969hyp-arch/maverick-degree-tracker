@@ -102,9 +102,16 @@ export default function Dashboard() {
     [allRequirements, transcript]
   );
 
-  const programAnalysis = useMemo(
-    () => analyzeProgress(programRequirements, transcript),
-    [programRequirements, transcript]
+  const perProgramAnalyses = useMemo(
+    () =>
+      selectedProgramIds.map((pid) => {
+        const program = majors.find((m) => m.id === pid);
+        const reqs = programRequirements.filter((r) =>
+          program ? r.category.startsWith(program.name + " —") : false
+        );
+        return { program, analysis: analyzeProgress(reqs, transcript) };
+      }),
+    [selectedProgramIds, majors, programRequirements, transcript]
   );
 
   const addCourse = async (course) => {
@@ -175,7 +182,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 flex flex-col gap-6">
               <section className="rounded-2xl border bg-card p-6 shadow-sm">
-                <ProgressOverview overallAnalysis={overallAnalysis} programAnalysis={programAnalysis} />
+                <ProgressOverview overallAnalysis={overallAnalysis} perProgramAnalyses={perProgramAnalyses} />
               </section>
 
               <section className="rounded-2xl border bg-card p-6 shadow-sm">
