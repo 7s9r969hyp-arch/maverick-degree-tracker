@@ -16,25 +16,34 @@ export default function ProgramSelector({ programs, selectedIds, onToggle, progr
     });
   };
 
+  const byCreditsLeft = (a, b) => {
+    const pa = programProgress?.[a.id];
+    const pb = programProgress?.[b.id];
+    const ra = pa && pa.totalCredits > 0 ? pa.remainingCredits : Infinity;
+    const rb = pb && pb.totalCredits > 0 ? pb.remainingCredits : Infinity;
+    if (ra !== rb) return ra - rb;
+    return a.name.localeCompare(b.name);
+  };
+
   const majors = useMemo(() =>
     programs
       .filter((p) => p.degree_type !== "Minor" && p.degree_type !== "Certificate" && p.degree_type !== "General Education")
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    [programs]
+      .sort(byCreditsLeft),
+    [programs, programProgress]
   );
 
   const minors = useMemo(() =>
     programs
       .filter((p) => p.degree_type === "Minor")
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    [programs]
+      .sort(byCreditsLeft),
+    [programs, programProgress]
   );
 
   const certificates = useMemo(() =>
     programs
       .filter((p) => p.degree_type === "Certificate")
-      .sort((a, b) => a.name.localeCompare(b.name)),
-    [programs]
+      .sort(byCreditsLeft),
+    [programs, programProgress]
   );
 
   const filteredMajors = search
