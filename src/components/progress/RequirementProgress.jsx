@@ -216,7 +216,13 @@ export default function RequirementProgress({ categories }) {
     );
   }
 
-  const sortedCategories = [...categories].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  const sortedCategories = [...categories].sort((a, b) => {
+    const aIsGE = !(a.name || "").includes("—");
+    const bIsGE = !(b.name || "").includes("—");
+    if (aIsGE && !bIsGE) return -1;
+    if (!aIsGE && bIsGE) return 1;
+    return (a.name || "").localeCompare(b.name || "");
+  });
   return (
     <Accordion type="multiple" value={openCats} onValueChange={setOpenCats} className="w-full">
       {sortedCategories.map((cat) => {
