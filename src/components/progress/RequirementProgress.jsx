@@ -206,11 +206,11 @@ export default function RequirementProgress({ categories }) {
                 <span className="font-medium text-sm">{cat.name}</span>
                 <span
                   className={cn(
-                    "text-xs px-2 py-0.5 rounded-full",
-                    allDone ? "bg-emerald-100 text-emerald-700" : "bg-muted text-muted-foreground"
+                    "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full",
+                    allDone ? "bg-emerald-100 text-emerald-700" : doneTotal > 0 ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"
                   )}
                 >
-                  {doneTotal}/{total}
+                  {allDone ? "Complete" : doneTotal > 0 ? "In progress" : "Not started"}
                   {inProgressCount > 0 && (
                     <span className="text-blue-500 ml-1">+{inProgressCount} IP</span>
                   )}

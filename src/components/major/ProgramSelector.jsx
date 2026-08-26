@@ -5,7 +5,16 @@ import { Input } from "@/components/ui/input";
 
 export default function ProgramSelector({ programs, selectedIds, onToggle }) {
   const [search, setSearch] = useState("");
-  const [showAll, setShowAll] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState(new Set());
+
+  const toggleGroup = (label) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  };
 
   const majors = useMemo(() =>
     programs
@@ -40,8 +49,9 @@ export default function ProgramSelector({ programs, selectedIds, onToggle }) {
 
   const renderGroup = (label, icon, list, defaultLimit = 12) => {
     if (list.length === 0) return null;
-    const visible = showAll || search ? list : list.slice(0, defaultLimit);
-    const hasMore = !showAll && !search && list.length > defaultLimit;
+    const isExpanded = expandedGroups.has(label);
+    const visible = isExpanded || search ? list : list.slice(0, defaultLimit);
+    const hasMore = !isExpanded && !search && list.length > defaultLimit;
 
     return (
       <div>
@@ -79,10 +89,19 @@ export default function ProgramSelector({ programs, selectedIds, onToggle }) {
         {hasMore && (
           <button
             type="button"
-            onClick={() => setShowAll(true)}
+            onClick={() => toggleGroup(label)}
             className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
             <ChevronDown className="h-3 w-3" /> Show all
+          </button>
+        )}
+        {isExpanded && !search && list.length > defaultLimit && (
+          <button
+            type="button"
+            onClick={() => toggleGroup(label)}
+            className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <ChevronRight className="h-3 w-3" /> Show less
           </button>
         )}
       </div>
@@ -103,15 +122,6 @@ export default function ProgramSelector({ programs, selectedIds, onToggle }) {
       {renderGroup("Majors", <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />, filteredMajors)}
       {renderGroup("Minors", <Layers className="h-3.5 w-3.5 text-muted-foreground" />, filteredMinors)}
       {renderGroup("Certificates", <Award className="h-3.5 w-3.5 text-muted-foreground" />, filteredCerts)}
-      {showAll && !search && (
-        <button
-          type="button"
-          onClick={() => setShowAll(false)}
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-        >
-          <ChevronRight className="h-3 w-3" /> Show less
-        </button>
-      )}
       {selectedIds.length > 0 && (
         <p className="text-sm text-muted-foreground">
           {selectedIds.length} program{selectedIds.length === 1 ? "" : "s"} selected

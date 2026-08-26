@@ -4,7 +4,9 @@ import { Progress } from "@/components/ui/progress";
 
 function ProgramBar({ program, analysis }) {
   const pct = analysis.progressPercent;
+  const projectedPct = analysis.projectedPercent;
   const ip = analysis.inProgressRequired;
+  const hasPlanned = (analysis.plannedCredits || 0) > 0 || (analysis.plannedRequired && analysis.plannedRequired.length > 0);
   return (
     <div className="rounded-xl border bg-muted/30 p-4">
       <div className="flex items-end justify-between mb-2.5">
@@ -29,6 +31,17 @@ function ProgramBar({ program, analysis }) {
         </div>
       </div>
       <Progress value={pct} className="h-2" />
+      {hasPlanned && projectedPct > pct && (
+        <div className="mt-2">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[11px] text-violet-600 flex items-center gap-1">
+              <CalendarPlus className="h-3 w-3" /> Projected
+            </span>
+            <span className="text-xs font-medium text-violet-700">{projectedPct}%</span>
+          </div>
+          <Progress value={projectedPct} className="h-1.5" />
+        </div>
+      )}
     </div>
   );
 }
