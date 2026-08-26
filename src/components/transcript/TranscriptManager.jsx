@@ -26,7 +26,26 @@ export default function TranscriptManager({ courses, courseCatalog, onAdd, onBul
   const fileInputRef = useRef(null);
 
   const departments = Object.keys(courseCatalog || {}).sort();
-  const courseOptions = form.dept ? courseCatalog[form.dept] || [] : [];
+  const courseOptions = form.dept ? (courseCatalog[form.dept] || []) : [];
+  const [courseSearch, setCourseSearch] = useState("");
+  const [showCourseSearch, setShowCourseSearch] = useState(false);
+
+  // Group departments by first letter for easier scanning
+  const groupedDepts = departments.reduce((acc, d) => {
+    const letter = d[0].toUpperCase();
+    if (!acc[letter]) acc[letter] = [];
+    acc[letter].push(d);
+    return acc;
+  }, {});
+  const deptLetters = Object.keys(groupedDepts).sort();
+
+  // Filter courses by search
+  const filteredCourses = courseSearch
+    ? courseOptions.filter((c) =>
+        c.code.toLowerCase().includes(courseSearch.toLowerCase()) ||
+        (c.name || "").toLowerCase().includes(courseSearch.toLowerCase())
+      )
+    : courseOptions;
 
   const handleTranscriptUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -51,6 +70,7 @@ export default function TranscriptManager({ courses, courseCatalog, onAdd, onBul
 
   const selectDept = (dept) => {
     setForm((f) => ({ ...f, dept, courseNumber: "", course_name: "", credits: "" }));
+    setCourseSearch("");
   };
 
   const selectCourse = (code) => {
@@ -146,22 +166,37 @@ export default function TranscriptManager({ courses, courseCatalog, onAdd, onBul
             onChange={(e) => selectDept(e.target.value)}
             className={selectClass}
           >
-            <option value="">Select dept</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>{d}</option>
+            <option value="">Select department</option>
+            {deptLetters.map((letter) => (
+              <optgroup key={letter} label={letter}>
+                {groupedDepts[letter].map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Course</Label>
+          {showCourseSearch && form.dept && (
+            <Input
+              value={courseSearch}
+              onChange={(e) => setCourseSearch(e.target.value)}
+              placeholder="Filter courses..."
+              className="mb-1 h-8 text-xs"
+              autoFocus
+            />
+          )}
           <select
             value={form.courseNumber}
             onChange={(e) => selectCourse(e.target.value)}
             className={selectClass}
             disabled={!form.dept}
+            onDoubleClick={() => setShowCourseSearch((s) => !s)}
+            title={form.dept ? "Double-click to toggle course search" : ""}
           >
-            <option value="">Select course</option>
-            {courseOptions.map((c) => (
+            <option value="">Select course{courseOptions.length > 0 ? ` (${courseOptions.length})` : ""}</option>
+            {filteredCourses.map((c) => (
               <option key={c.code} value={c.code}>
                 {c.code}{c.name ? ` — ${c.name}` : ""}{c.credits ? ` (${c.credits} cr)` : ""}
               </option>

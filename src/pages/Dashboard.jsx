@@ -27,7 +27,7 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const data = await base44.entities.Major.list("name", 100);
+        const data = await base44.entities.Major.list("name", 500);
         setMajors(data);
       } catch (e) {
         toast({ variant: "destructive", title: "Could not load majors catalog." });
