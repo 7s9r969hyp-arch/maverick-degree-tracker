@@ -234,28 +234,29 @@ export default function RequirementProgress({ categories }) {
         const allDone = doneTotal === total && total > 0;
         const projectedDoneTotal = doneTotal + plannedCount + cat.electiveGroupList.filter((g) => !g.satisfied && g.projectedSatisfied).length;
 
+        const catTotalCredits = cat.requiredItems.reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.minCredits || 0), 0);
+        const catCompletedCredits = cat.requiredItems.filter((i) => i.status === "complete").reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.completedCredits || 0), 0);
+        const catInProgressCredits = cat.requiredItems.filter((i) => i.status === "in_progress").reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.inProgressCredits || 0), 0);
+        const catPlannedCredits = cat.requiredItems.filter((i) => i.status === "planned").reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.plannedCredits || 0), 0);
+        const catRemainingCredits = Math.max(0, catTotalCredits - catCompletedCredits - catInProgressCredits);
+        const catPct = catTotalCredits > 0 ? Math.min(100, Math.round((catCompletedCredits / catTotalCredits) * 100)) : 0;
+
         return (
           <AccordionItem key={cat.name} value={cat.name} className="border-b">
             <AccordionTrigger className="hover:no-underline py-4">
               <div className="flex items-center gap-3 flex-1">
                 <span className="font-medium text-sm">{cat.name}</span>
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full",
-                    allDone ? "bg-emerald-100 text-emerald-700" : doneTotal > 0 ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {allDone ? "Complete" : doneTotal > 0 ? "In progress" : "Not started"}
-                  {inProgressCount > 0 && (
-                    <span className="text-blue-500 ml-1">+{inProgressCount} IP</span>
-                  )}
-                  {plannedCount > 0 && (
-                    <span className="text-violet-500 ml-1">+{plannedCount} planned</span>
-                  )}
-                  {!allDone && projectedDoneTotal === total && plannedCount > 0 && (
-                    <span className="text-violet-600 ml-1">✓ projected</span>
-                  )}
-                </span>
+                <div className="flex items-center gap-2 ml-auto">
+                  <div className="w-24">
+                    <Progress value={catPct} className="h-2" />
+                  </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap">
+                    {catRemainingCredits > 0 ? `${catRemainingCredits} cr left` : "✓ Complete"}
+                    {catInProgressCredits > 0 && <span className="text-blue-500 ml-1">+{catInProgressCredits} IP</span>}
+                    {catPlannedCredits > 0 && <span className="text-violet-500 ml-1">+{catPlannedCredits} planned</span>}
+                    {!allDone && projectedDoneTotal === total && plannedCount > 0 && <span className="text-violet-600 ml-1">✓ projected</span>}
+                  </span>
+                </div>
               </div>
             </AccordionTrigger>
             <AccordionContent className="pb-3">
