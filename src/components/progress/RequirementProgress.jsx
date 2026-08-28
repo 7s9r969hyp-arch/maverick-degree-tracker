@@ -8,11 +8,14 @@ import {
 } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { parseRangeCode } from "@/lib/degreeUtils";
 
 const getDept = (code) => {
   const m = (code || "").match(/^([A-Za-z]+)/);
   return m ? m[1].toUpperCase() : "";
 };
+
+const isRangeCode = (code) => parseRangeCode(code) !== null;
 
 const formatCredits = (item) => {
   if (item.credits_range) return `${item.credits_range} cr`;
@@ -67,16 +70,15 @@ function CourseRow({ item }) {
 
 function ElectiveGroupBlock({ group }) {
   const [selectedDiscipline, setSelectedDiscipline] = useState("");
-  const disciplines = [...new Set(group.options.map((o) => getDept(o.course_code)))].filter(Boolean).sort();
+  const displayOptions = group.options.filter((o) => !isRangeCode(o.course_code));
+  const disciplines = [...new Set(displayOptions.map((o) => getDept(o.course_code)))].filter(Boolean).sort();
   const visibleOptions = selectedDiscipline
-    ? group.options.filter((o) => getDept(o.course_code) === selectedDiscipline)
-    : group.options;
+    ? displayOptions.filter((o) => getDept(o.course_code) === selectedDiscipline)
+    : displayOptions;
   const sortedOptions = [...visibleOptions].sort((a, b) =>
     (a.course_code || "").localeCompare(b.course_code || "", undefined, { numeric: true })
   );
   const pct = group.minCredits > 0 ? Math.min(100, Math.round((group.completedCredits / group.minCredits) * 100)) : 0;
-  const minOptionCredits = group.options.length > 0 ? Math.min(...group.options.map((o) => o.credits || 3)) : 3;
-  const coursesNeeded = Math.ceil(group.minCredits / minOptionCredits);
 
   const disciplinesMet = group.minDisciplines > 0 ? group.distinctDisciplines >= group.minDisciplines : true;
   const remainingDisciplines = Math.max(0, (group.minDisciplines || 0) - group.distinctDisciplines);
@@ -139,11 +141,6 @@ function ElectiveGroupBlock({ group }) {
           </span>
         </div>
       )}
-      <p className="text-xs text-muted-foreground mb-1.5">
-        {group.satisfied
-          ? "✓ Requirement satisfied"
-          : `Choose ${coursesNeeded} (${group.minCredits} cr needed${group.minDisciplines > 0 ? ` from ${group.minDisciplines} disciplines` : ""})`}
-      </p>
       {!group.satisfied && group.projectedSatisfied && group.plannedCredits > 0 && (
         <div className="flex items-center gap-1.5 text-xs text-violet-600 mb-1.5">
           <CalendarPlus className="h-3 w-3" />
@@ -157,9 +154,9 @@ function ElectiveGroupBlock({ group }) {
             onChange={(e) => setSelectedDiscipline(e.target.value)}
             className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
           >
-            <option value="">All disciplines ({group.options.length})</option>
+            <option value="">All disciplines ({displayOptions.length})</option>
             {disciplines.map((d) => {
-              const count = group.options.filter((o) => getDept(o.course_code) === d).length;
+              const count = displayOptions.filter((o) => getDept(o.course_code) === d).length;
               return <option key={d} value={d}>{d} ({count})</option>;
             })}
           </select>

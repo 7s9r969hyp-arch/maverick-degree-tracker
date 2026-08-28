@@ -147,8 +147,8 @@ export default function Dashboard() {
   );
 
   const overallAnalysis = useMemo(
-    () => analyzeProgress(allRequirements, transcript, plannedCourses),
-    [allRequirements, transcript, plannedCourses]
+    () => analyzeProgress(allRequirements, transcript, plannedCourses, courseCatalog),
+    [allRequirements, transcript, plannedCourses, courseCatalog]
   );
 
   const perProgramAnalyses = useMemo(
@@ -158,9 +158,9 @@ export default function Dashboard() {
         const reqs = programRequirements.filter((r) =>
           program ? r.program_group === program.name : false
         );
-        return { program, analysis: analyzeProgress(reqs, transcript, plannedCourses) };
+        return { program, analysis: analyzeProgress(reqs, transcript, plannedCourses, courseCatalog) };
       }),
-    [selectedProgramIds, majors, programRequirements, transcript, plannedCourses]
+    [selectedProgramIds, majors, programRequirements, transcript, plannedCourses, courseCatalog]
   );
 
   const programProgressMap = useMemo(
@@ -168,11 +168,11 @@ export default function Dashboard() {
       const map = {};
       majors.filter((m) => m.degree_type !== "General Education").forEach((p) => {
         const reqs = catalogRequirements.filter((r) => r.major_id === p.id);
-        map[p.id] = reqs.length > 0 ? analyzeProgress(reqs, transcript, plannedCourses) : null;
+        map[p.id] = reqs.length > 0 ? analyzeProgress(reqs, transcript, plannedCourses, courseCatalog) : null;
       });
       return map;
     },
-    [majors, catalogRequirements, transcript, plannedCourses]
+    [majors, catalogRequirements, transcript, plannedCourses, courseCatalog]
   );
 
   const addCourse = async (course) => {

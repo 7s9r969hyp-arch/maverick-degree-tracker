@@ -31,8 +31,47 @@ export function getDiscipline(courseCode) {
   return match ? match[1].toUpperCase() : "";
 }
 
+// Parses a range-based course code like "BIOL 300-499" or "AVIA 101 - 499" or "BIOL 200+"
+// Returns { dept, min, max } or null if not a range code.
+export function parseRangeCode(code) {
+  if (!code) return null;
+  // Match "DEPT ###-###" (with optional spaces around dash)
+  const m1 = String(code).match(/^([A-Za-z]+)\s*(\d+)\s*-\s*(\d+)$/);
+  if (m1) return { dept: m1[1].toUpperCase(), min: parseInt(m1[2], 10), max: parseInt(m1[3], 10) };
+  // Match "DEPT ###+" (minimum level)
+  const m2 = String(code).match(/^([A-Za-z]+)\s*(\d+)\+$/);
+  if (m2) return { dept: m2[1].toUpperCase(), min: parseInt(m2[2], 10), max: 999 };
+  return null;
+}
+
+// Extracts the numeric course level from a code like "BIOL 443W" -> 443
+export function getCourseNumber(code) {
+  if (!code) return null;
+  const m = String(code).match(/(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+// Expands a range-based course code to individual courses from the catalog.
+// Returns an array of { course_code, course_name, credits } objects.
+export function expandRangeCourses(rangeCode, courseCatalog) {
+  const range = parseRangeCode(rangeCode);
+  if (!range || !courseCatalog) return [];
+  const deptCourses = courseCatalog[range.dept];
+  if (!deptCourses) return [];
+  return deptCourses
+    .filter((c) => {
+      const num = getCourseNumber(c.code);
+      return num !== null && num >= range.min && num <= range.max;
+    })
+    .map((c) => ({
+      course_code: c.code,
+      course_name: c.name,
+      credits: c.credits || 3,
+    }));
+}
+
 // Compares requirements against completed + in-progress + planned courses.
-export function analyzeProgress(requirements, transcriptCourses, plannedCourses = []) {
+export function analyzeProgress(requirements, transcriptCourses, plannedCourses = [], courseCatalog = {}) {
   const completed = buildCompletedSet(transcriptCourses);
   const inProgress = buildInProgressSet(transcriptCourses);
   const planned = buildPlannedSet(plannedCourses);
@@ -92,12 +131,38 @@ export function analyzeProgress(requirements, transcriptCourses, plannedCourses 
       g.minCredits = Math.max(g.minCredits, req.group_min_credits || 0);
       g.minDisciplines = Math.max(g.minDisciplines, req.group_min_disciplines || 0);
       g.minPurpleCredits = Math.max(g.minPurpleCredits, req.group_min_purple_credits || 0);
-      if (completed.has(norm)) {
-        g.completedCourses.push(req);
-      } else if (inProgress.has(norm)) {
-        g.inProgressCourses.push(req);
-      } else if (planned.has(norm)) {
-        g.plannedCourses.push(req);
+      // If this is a range-based code, expand to individual courses from the catalog
+      const range = parseRangeCode(req.course_code);
+      if (range) {
+        g._hasRange = true;
+        const expanded = expandRangeCourses(req.course_code, courseCatalog);
+        expanded.forEach((course) => {
+          const expNorm = normalizeCode(course.course_code);
+          // Don't add duplicates
+          if (g.options.some((o) => normalizeCode(o.course_code) === expNorm)) return;
+          g.options.push({
+            ...req,
+            course_code: course.course_code,
+            course_name: course.course_name,
+            credits: course.credits,
+            _expanded: true,
+          });
+          if (completed.has(expNorm)) {
+            g.completedCourses.push({ ...req, course_code: course.course_code, course_name: course.course_name, credits: course.credits, _expanded: true });
+          } else if (inProgress.has(expNorm)) {
+            g.inProgressCourses.push({ ...req, course_code: course.course_code, course_name: course.course_name, credits: course.credits, _expanded: true });
+          } else if (planned.has(expNorm)) {
+            g.plannedCourses.push({ ...req, course_code: course.course_code, course_name: course.course_name, credits: course.credits, _expanded: true });
+          }
+        });
+      } else {
+        if (completed.has(norm)) {
+          g.completedCourses.push(req);
+        } else if (inProgress.has(norm)) {
+          g.inProgressCourses.push(req);
+        } else if (planned.has(norm)) {
+          g.plannedCourses.push(req);
+        }
       }
     }
   });
@@ -195,7 +260,7 @@ export function analyzeProgress(requirements, transcriptCourses, plannedCourses 
     plannedCredits,
     projectedCredits,
     projectedRemainingCredits,
-    remainingCredits: Math.max(0, totalCredits - completedCredits),
+    remainingCredits: Math.max(0, totalCredits - completedCredits - inProgressCredits),
     allCompletedCredits: completedRequiredCredits + allCompletedElectiveCredits,
     progressPercent: totalCredits > 0 ? Math.round((completedCredits / totalCredits) * 100) : 0,
     projectedPercent: totalCredits > 0 ? Math.round((projectedCredits / totalCredits) * 100) : 0,
