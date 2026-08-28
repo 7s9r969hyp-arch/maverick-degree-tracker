@@ -24,6 +24,11 @@
       "type": "number",
       "title": "Credits"
     },
+    "credits_range": {
+      "type": "string",
+      "title": "Credits Range",
+      "description": "Credit range for variable-credit courses (e.g. '1-3'). Leave null for fixed-credit courses."
+    },
     "requirement_type": {
       "type": "string",
       "enum": [

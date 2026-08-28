@@ -128,7 +128,7 @@ export default function Dashboard() {
           const program = majors.find((m) => m.id === pid);
           const prefix = program ? program.name : "Program";
           reqArrays[i].forEach((r) => {
-            combined.push({ ...r, category: `${prefix} — ${r.category}` });
+            combined.push({ ...r, program_group: prefix });
           });
         });
         setProgramRequirements(combined);
@@ -156,7 +156,7 @@ export default function Dashboard() {
       selectedProgramIds.map((pid) => {
         const program = majors.find((m) => m.id === pid);
         const reqs = programRequirements.filter((r) =>
-          program ? r.category.startsWith(program.name + " —") : false
+          program ? r.program_group === program.name : false
         );
         return { program, analysis: analyzeProgress(reqs, transcript, plannedCourses) };
       }),

@@ -14,6 +14,11 @@ const getDept = (code) => {
   return m ? m[1].toUpperCase() : "";
 };
 
+const formatCredits = (item) => {
+  if (item.credits_range) return `${item.credits_range} cr`;
+  return `${item.credits || 0} cr`;
+};
+
 function CourseRow({ item }) {
   const done = item.status === "complete";
   const inProgress = item.status === "in_progress";
@@ -55,7 +60,7 @@ function CourseRow({ item }) {
           </p>
         )}
       </div>
-      <span className="text-xs text-muted-foreground shrink-0">{item.credits} cr</span>
+      <span className="text-xs text-muted-foreground shrink-0">{formatCredits(item)}</span>
     </div>
   );
 }
@@ -196,7 +201,7 @@ function ElectiveGroupBlock({ group }) {
               <span className="text-xs text-muted-foreground truncate flex-1">
                 {opt.course_name || "Untitled"}
               </span>
-              <span className="text-xs text-muted-foreground shrink-0">{opt.credits} cr</span>
+              <span className="text-xs text-muted-foreground shrink-0">{formatCredits(opt)}</span>
             </div>
           );
         })}
@@ -205,8 +210,41 @@ function ElectiveGroupBlock({ group }) {
   );
 }
 
+function CategoryContent({ cat }) {
+  return (
+    <div>
+      <div className="divide-y">
+        {[...cat.requiredItems].sort((a, b) => (a.course_code || "").localeCompare(b.course_code || "", undefined, { numeric: true })).map((item) => (
+          <CourseRow key={item.id || item.course_code} item={item} />
+        ))}
+      </div>
+      {[...cat.electiveGroupList].sort((a, b) => (a.label || "").localeCompare(b.label || "")).map((g) => (
+        <ElectiveGroupBlock key={g.label} group={g} />
+      ))}
+    </div>
+  );
+}
+
+function calcCategoryStats(cat) {
+  const doneCount = cat.requiredItems.filter((i) => i.status === "complete").length;
+  const inProgressCount = cat.requiredItems.filter((i) => i.status === "in_progress").length;
+  const plannedCount = cat.requiredItems.filter((i) => i.status === "planned").length;
+  const total = cat.requiredItems.length + cat.electiveGroupList.length;
+  const doneTotal = doneCount + cat.electiveGroupList.filter((g) => g.satisfied).length;
+  const allDone = doneTotal === total && total > 0;
+
+  const catTotalCredits = cat.requiredItems.reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.minCredits || 0), 0);
+  const catCompletedCredits = cat.requiredItems.filter((i) => i.status === "complete").reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.completedCredits || 0), 0);
+  const catInProgressCredits = cat.requiredItems.filter((i) => i.status === "in_progress").reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.inProgressCredits || 0), 0);
+  const catPlannedCredits = cat.requiredItems.filter((i) => i.status === "planned").reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.plannedCredits || 0), 0);
+  const catRemainingCredits = Math.max(0, catTotalCredits - catCompletedCredits - catInProgressCredits);
+  const catPct = catTotalCredits > 0 ? Math.min(100, Math.round((catCompletedCredits / catTotalCredits) * 100)) : 0;
+
+  return { doneCount, inProgressCount, plannedCount, total, doneTotal, allDone, catTotalCredits, catCompletedCredits, catInProgressCredits, catPlannedCredits, catRemainingCredits, catPct };
+}
+
 export default function RequirementProgress({ categories }) {
-  const [openCats, setOpenCats] = useState([]);
+  const [openItems, setOpenItems] = useState([]);
 
   if (categories.length === 0) {
     return (
@@ -216,58 +254,121 @@ export default function RequirementProgress({ categories }) {
     );
   }
 
-  const sortedCategories = [...categories].sort((a, b) => {
-    const aIsGE = !(a.name || "").includes("—");
-    const bIsGE = !(b.name || "").includes("—");
-    if (aIsGE && !bIsGE) return -1;
-    if (!aIsGE && bIsGE) return 1;
-    return (a.name || "").localeCompare(b.name || "");
+  // Group categories by programGroup
+  const geCategories = categories.filter((c) => !c.programGroup);
+  const programGroupsMap = {};
+  categories.filter((c) => c.programGroup).forEach((c) => {
+    if (!programGroupsMap[c.programGroup]) programGroupsMap[c.programGroup] = [];
+    programGroupsMap[c.programGroup].push(c);
   });
+
+  // Sort GE categories alphabetically
+  geCategories.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  // Sort program groups alphabetically
+  const sortedProgramGroups = Object.keys(programGroupsMap).sort();
+  // Sort categories within each program group alphabetically
+  sortedProgramGroups.forEach((pg) => {
+    programGroupsMap[pg].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  });
+
+  const renderCategoryTrigger = (cat, stats) => (
+    <AccordionTrigger className="hover:no-underline py-4">
+      <div className="flex items-center gap-3 flex-1">
+        <span className="font-medium text-sm">{cat.name}</span>
+        <div className="flex items-center gap-2 ml-auto">
+          <div className="w-24">
+            <Progress value={stats.catPct} className="h-2" />
+          </div>
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {stats.catRemainingCredits > 0 ? `${stats.catRemainingCredits} cr left` : "✓ Complete"}
+            {stats.catInProgressCredits > 0 && <span className="text-blue-500 ml-1">+{stats.catInProgressCredits} IP</span>}
+            {stats.catPlannedCredits > 0 && <span className="text-violet-500 ml-1">+{stats.catPlannedCredits} planned</span>}
+          </span>
+        </div>
+      </div>
+    </AccordionTrigger>
+  );
+
+  const renderProgramGroupTrigger = (pgName, cats) => {
+    // Aggregate stats across all sub-categories
+    const totalCredits = cats.reduce((s, cat) => {
+      const st = calcCategoryStats(cat);
+      return s + st.catTotalCredits;
+    }, 0);
+    const completedCredits = cats.reduce((s, cat) => {
+      const st = calcCategoryStats(cat);
+      return s + st.catCompletedCredits;
+    }, 0);
+    const inProgressCredits = cats.reduce((s, cat) => {
+      const st = calcCategoryStats(cat);
+      return s + st.catInProgressCredits;
+    }, 0);
+    const plannedCredits = cats.reduce((s, cat) => {
+      const st = calcCategoryStats(cat);
+      return s + st.catPlannedCredits;
+    }, 0);
+    const remainingCredits = Math.max(0, totalCredits - completedCredits - inProgressCredits);
+    const pct = totalCredits > 0 ? Math.min(100, Math.round((completedCredits / totalCredits) * 100)) : 0;
+
+    return (
+      <AccordionTrigger className="hover:no-underline py-4">
+        <div className="flex items-center gap-3 flex-1">
+          <span className="font-semibold text-sm">{pgName}</span>
+          <div className="flex items-center gap-2 ml-auto">
+            <div className="w-24">
+              <Progress value={pct} className="h-2" />
+            </div>
+            <span className="text-xs text-muted-foreground whitespace-nowrap">
+              {remainingCredits > 0 ? `${remainingCredits} cr left` : "✓ Complete"}
+              {inProgressCredits > 0 && <span className="text-blue-500 ml-1">+{inProgressCredits} IP</span>}
+              {plannedCredits > 0 && <span className="text-violet-500 ml-1">+{plannedCredits} planned</span>}
+            </span>
+          </div>
+        </div>
+      </AccordionTrigger>
+    );
+  };
+
   return (
-    <Accordion type="multiple" value={openCats} onValueChange={setOpenCats} className="w-full">
-      {sortedCategories.map((cat) => {
-        const doneCount = cat.requiredItems.filter((i) => i.status === "complete").length;
-        const inProgressCount = cat.requiredItems.filter((i) => i.status === "in_progress").length;
-        const plannedCount = cat.requiredItems.filter((i) => i.status === "planned").length;
-        const total = cat.requiredItems.length + cat.electiveGroupList.length;
-        const doneTotal = doneCount + cat.electiveGroupList.filter((g) => g.satisfied).length;
-        const allDone = doneTotal === total && total > 0;
-        const projectedDoneTotal = doneTotal + plannedCount + cat.electiveGroupList.filter((g) => !g.satisfied && g.projectedSatisfied).length;
-
-        const catTotalCredits = cat.requiredItems.reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.minCredits || 0), 0);
-        const catCompletedCredits = cat.requiredItems.filter((i) => i.status === "complete").reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.completedCredits || 0), 0);
-        const catInProgressCredits = cat.requiredItems.filter((i) => i.status === "in_progress").reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.inProgressCredits || 0), 0);
-        const catPlannedCredits = cat.requiredItems.filter((i) => i.status === "planned").reduce((s, i) => s + (i.credits || 0), 0) + cat.electiveGroupList.reduce((s, g) => s + (g.plannedCredits || 0), 0);
-        const catRemainingCredits = Math.max(0, catTotalCredits - catCompletedCredits - catInProgressCredits);
-        const catPct = catTotalCredits > 0 ? Math.min(100, Math.round((catCompletedCredits / catTotalCredits) * 100)) : 0;
-
+    <Accordion type="multiple" value={openItems} onValueChange={setOpenItems} className="w-full">
+      {/* GE categories (no program group) */}
+      {geCategories.map((cat) => {
+        const stats = calcCategoryStats(cat);
         return (
-          <AccordionItem key={cat.name} value={cat.name} className="border-b">
-            <AccordionTrigger className="hover:no-underline py-4">
-              <div className="flex items-center gap-3 flex-1">
-                <span className="font-medium text-sm">{cat.name}</span>
-                <div className="flex items-center gap-2 ml-auto">
-                  <div className="w-24">
-                    <Progress value={catPct} className="h-2" />
-                  </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {catRemainingCredits > 0 ? `${catRemainingCredits} cr left` : "✓ Complete"}
-                    {catInProgressCredits > 0 && <span className="text-blue-500 ml-1">+{catInProgressCredits} IP</span>}
-                    {catPlannedCredits > 0 && <span className="text-violet-500 ml-1">+{catPlannedCredits} planned</span>}
-                    {!allDone && projectedDoneTotal === total && plannedCount > 0 && <span className="text-violet-600 ml-1">✓ projected</span>}
-                  </span>
-                </div>
-              </div>
-            </AccordionTrigger>
+          <AccordionItem key={cat.key} value={cat.key} className="border-b">
+            {renderCategoryTrigger(cat, stats)}
             <AccordionContent className="pb-3">
-              <div className="divide-y">
-                {[...cat.requiredItems].sort((a, b) => (a.course_code || "").localeCompare(b.course_code || "", undefined, { numeric: true })).map((item) => (
-                  <CourseRow key={item.id || item.course_code} item={item} />
-                ))}
+              <CategoryContent cat={cat} />
+            </AccordionContent>
+          </AccordionItem>
+        );
+      })}
+      {/* Program groups */}
+      {sortedProgramGroups.map((pgName) => {
+        const pgKey = `pg|||${pgName}`;
+        const cats = programGroupsMap[pgName];
+        return (
+          <AccordionItem key={pgKey} value={pgKey} className="border-b">
+            {renderProgramGroupTrigger(pgName, cats)}
+            <AccordionContent className="pb-3">
+              <div className="flex flex-col gap-3">
+                {cats.map((cat) => {
+                  const stats = calcCategoryStats(cat);
+                  return (
+                    <div key={cat.key} className="rounded-lg border bg-muted/20 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          {cat.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {stats.catRemainingCredits > 0 ? `${stats.catRemainingCredits} cr left` : "✓ Complete"}
+                        </span>
+                      </div>
+                      <CategoryContent cat={cat} />
+                    </div>
+                  );
+                })}
               </div>
-              {[...cat.electiveGroupList].sort((a, b) => (a.label || "").localeCompare(b.label || "")).map((g) => (
-                <ElectiveGroupBlock key={g.label} group={g} />
-              ))}
             </AccordionContent>
           </AccordionItem>
         );

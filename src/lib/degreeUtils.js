@@ -46,16 +46,16 @@ export function analyzeProgress(requirements, transcriptCourses, plannedCourses 
   });
 
   const categoryMap = {};
-  const getCategory = (name) => {
-    const key = name || "General";
+  const getCategory = (name, programGroup) => {
+    const key = programGroup ? `${programGroup}|||${name || "General"}` : (name || "General");
     if (!categoryMap[key]) {
-      categoryMap[key] = { name: key, requiredItems: [], electiveGroups: {} };
+      categoryMap[key] = { name: name || "General", programGroup: programGroup || null, key, requiredItems: [], electiveGroups: {} };
     }
     return categoryMap[key];
   };
 
   (requirements || []).forEach((req) => {
-    const cat = getCategory(req.category);
+    const cat = getCategory(req.category, req.program_group);
     const isElective = req.requirement_type === "elective" && req.elective_group;
     const norm = normalizeCode(req.course_code);
 
@@ -163,6 +163,7 @@ export function analyzeProgress(requirements, transcriptCourses, plannedCourses 
     (s, g) => s + Math.min(g.completedCredits, g.minCredits),
     0
   );
+  const allCompletedElectiveCredits = allGroups.reduce((s, g) => s + g.completedCredits, 0);
   const inProgressElectiveCredits = allGroups.reduce(
     (s, g) => s + Math.min(g.inProgressCredits, Math.max(0, g.minCredits - g.completedCredits)),
     0
@@ -195,6 +196,7 @@ export function analyzeProgress(requirements, transcriptCourses, plannedCourses 
     projectedCredits,
     projectedRemainingCredits,
     remainingCredits: Math.max(0, totalCredits - completedCredits),
+    allCompletedCredits: completedRequiredCredits + allCompletedElectiveCredits,
     progressPercent: totalCredits > 0 ? Math.round((completedCredits / totalCredits) * 100) : 0,
     projectedPercent: totalCredits > 0 ? Math.round((projectedCredits / totalCredits) * 100) : 0,
     remainingCount: remainingRequired.length + unsatisfiedGroups.length,
