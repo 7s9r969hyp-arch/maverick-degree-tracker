@@ -49,20 +49,26 @@ export default async function(req) {
       const programTypeLabel = program.degree_type === 'Minor' ? 'minor' :
         program.degree_type === 'Certificate' ? 'certificate' : 'major';
 
-      const prompt = `Look up the academic program requirements for "${program.name}" (${program.degree_type}) at Minnesota State University, Mankato (MNSU) from the official undergraduate catalog (catalog.mnsu.edu or bulletins.mnsu.edu).
+      const prompt = `Look up the academic program requirements for "${program.name}" (${program.degree_type}) at Minnesota State University, Mankato (MNSU) from the official undergraduate catalog at https://www.mnsu.edu/academic-catalog/undergraduate/. Search for the program page (e.g. accounting-bs, psychology-bs, history-bs, dance-minor, etc.).
 
-This is a ${programTypeLabel}. Return ONLY the ${programTypeLabel}-specific required courses — do NOT include general education courses, goal areas, or university-wide requirements.
+This is a ${programTypeLabel}. Return ALL courses listed in the program requirements, including:
+- Major Common Core courses (required courses)
+- Prerequisites to the Major (required courses)
+- Required General Education courses that are specifically listed on the program page
+- Elective groups (courses where students choose from a list)
 
-For each required course, provide:
+For EACH course listed in the program requirements, provide:
 - course_code: e.g. "CIS 121", "ACCT 201" (include a space between letters and number)
 - course_name: full course name from the catalog
-- credits: number of credits (typically 3 or 4)
-- category: requirement category, e.g. "${program.name} Core Requirements", "${program.name} Restricted Electives", "${program.name} Required Courses"
-- requirement_type: "required" for mandatory courses, "elective" for choice/elective courses
-- elective_group: if elective, a group label (e.g. "Elective Group A"); null/omit for required courses
-- group_min_credits: if elective group, minimum credits needed from that group; null/omit for required courses
+- credits: number of credits (typically 1-5)
+- category: the section heading from the catalog page, e.g. "Major Common Core", "Prerequisites to the Major", "Required General Education", "Electives"
+- requirement_type: "required" for mandatory courses, "elective" for choice/elective courses (where students pick from a list)
+- elective_group: if elective, a group label matching the catalog's group name (e.g. "Foundation in Tech Comm", "Chemistry Electives"); null/omit for required courses
+- group_min_credits: if elective group, the minimum credits needed from that group (from the "Choose X Credit(s)" text); null/omit for required courses
 
-Return a JSON object with a "requirements" array. Only include courses that are part of this specific ${programTypeLabel}. If you cannot find the program in the MNSU catalog, return an empty requirements array.`;
+IMPORTANT: Be thorough. Include EVERY course listed on the program page. A typical BS major has 30-50 courses totaling 120-128 credits. A typical minor has 5-15 courses totaling 15-25 credits. If the program has elective groups where students "Choose N credits", list ALL the course options in that group and set group_min_credits to N.
+
+Return a JSON object with a "requirements" array. If you cannot find the program in the MNSU catalog, return an empty requirements array.`;
 
       const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
         prompt,
